@@ -1,6 +1,6 @@
 import json
 import logging
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 
 # Set the default log level to "debug"
 logging.basicConfig(level=logging.DEBUG)
@@ -13,13 +13,24 @@ class UserInfo:
     avatar: str = ""
 
 class GameEngine:
-    async def handle_message(self, room, message):
+    async def handle_message(self, room, websocket, message, userinfo):
         raise NotImplementedError("Subclasses must implement this method.")
+    
+    def game_name(self):
+        return None
 
 class ChatGameEngine(GameEngine):
-    async def handle_message(self, room, message):
+    def game_name(self):
+        return "chat"
+    
+    def userinfo_to_dict(self, userinfo):
+        if userinfo is None:
+            return None
+        return asdict(userinfo)
+     
+    async def handle_message(self, room, websocket, message, userinfo):
         if message.get('type') == 'chat':
             text = message.get('text')
             if text:
                 for user in room.users:
-                    await user.send(json.dumps({"type": "game", "data": {"type": "chat", "text": f"{user.remote_address}: {text}"}}))
+                    await user.send(json.dumps({"type": "game", "data": {"type": "chat", "sender": self.userinfo_to_dict(userinfo), "text": f"{text}"}}))

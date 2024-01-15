@@ -1,71 +1,154 @@
 import asyncio
+from typing import Dict, List, Optional
+from room import Room, generate_user_info
 import websockets
 import json
 import logging
-from game_engine import ChatGameEngine, GameEngine
-from dataclasses import dataclass
+from game_engine import ChatGameEngine, GameEngine, UserInfo
+from dataclasses import dataclass, asdict
+import utils
+import pprint
+from colorlog import ColoredFormatter
+import traceback
+
+# Configure colorlog
+formatter = ColoredFormatter(
+    "%(log_color)s%(levelname)-8s%(reset)s %(blue)s%(message)s",
+    datefmt=None,
+    reset=True,
+    log_colors={
+        "DEBUG": "cyan",
+        "INFO": "green",
+        "WARNING": "yellow",
+        "ERROR": "red",
+        "CRITICAL": "red,bg_white",
+    },
+)
+
+# Set up the root logger with the configured formatter
+handler = logging.StreamHandler()
+handler.setFormatter(formatter)
+root_logger = logging.getLogger()
+root_logger.addHandler(handler)
+root_logger.setLevel(logging.INFO)
+
+logger = root_logger
 
 # Set the default log level to "info"
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
 
 
 @dataclass
-class UserInfo:
-    name: str
-    gender: int = 0  # 0 for unknown, -1 for male, 1 for female
-    avatar: str = ""
+class UserStatus:
+    info: UserInfo
+    room: Optional[str]
+    game_status: Optional[any]
 
 
-class Room:
-    def __init__(self, name, game_engine):
-        self.name = name
-        self.users = {}  # Use a dictionary to store user information
-        self.game_engine = game_engine
-
-    async def send_game_message(self, message):
-        await self.game_engine.handle_message(self, message)
-
-    async def notify_user_list_change(self):
-        user_list = [
-            {
-                "name": user_info.name,
-                "gender": user_info.gender,
-                "avatar": user_info.avatar,
-            }
-            for user_info in self.users.values()
-        ]
-        await asyncio.gather(
-            *(
-                user.send(json.dumps({"type": "user_list", "data": user_list}))
-                for user in self.users
-            )
-        )
-
+async def send_error(websocket, text):
+    await websocket.send(json.dumps({"type": "error", "message": text}))
 
 
 class WebSocketServer:
     def __init__(self):
-        self.rooms = {}
+        self.rooms: List[Room] = []
+        self.userRoomMapping: Dict[any, Optional[Room]] = {}
+        self.userInfoMapping: Dict[any, Optional[UserInfo]] = {}
+        self.admins = []
+        self.log_forever = True
+
+    def get_user_info(self, websocket) -> UserInfo:
+        if not (websocket in self.userInfoMapping):
+            self.userInfoMapping[websocket] = generate_user_info()
+        return self.userInfoMapping[websocket]
+
+    async def new_user_connects(self, websocket):
+        self.userRoomMapping[websocket] = None
+        await self.send_user_status(websocket)
+        await asyncio.sleep(1)
+        await self.send_room_list(websocket)
+
+    async def remove_room(self, room: Room):
+        self.rooms.remove(room)
+
+    async def broadcast_rooms(self):
+        users_outside = [
+            websocket
+            for websocket in self.userRoomMapping.keys()
+            if self.userRoomMapping[websocket] is None
+        ]
+        logger.info(f"Broadcasting room changes to {len(users_outside)} users")
+        await asyncio.gather(*(self.send_room_list(user) for user in users_outside))
+
+    async def user_leave_room(self, websocket, room: Optional[Room]):
+        self.userRoomMapping[websocket] = None
+        if room:
+            await room.remove(websocket)
+            if room.should_be_removed():
+                await self.remove_room(room)
+
+    async def user_change_room(self, websocket, room: Optional[Room]):
+        if (prev := self.userRoomMapping.get(websocket)) is not None:
+            await self.user_leave_room(websocket, prev)
+
+        # check if the room exists now
+        if room is not None and not room in self.rooms:
+            logger.error(f"Attempt to enter removed room: {room.describe()}")
+            await send_error(
+                websocket, f"Cannot enter room '{room.describe}': does not exist"
+            )
+            room = None
+
+        self.userRoomMapping[websocket] = room
+        if room:
+            await room.add(websocket, self.get_user_info(websocket))
+        await self.send_user_status(websocket)
+        await self.broadcast_rooms()
+
+    async def send_user_status(self, websocket):
+        info = self.get_user_info(websocket)
+        room = self.userRoomMapping.get(websocket)
+        roomname = None
+        roomgame = None
+        if room:
+            roomname = room.name
+            roomgame = room.status(websocket)
+        await websocket.send(json.dumps({"type": "status", "data": asdict(UserStatus(info=info, room=roomname, game_status=roomgame))}))
+        
+
+    async def handle_disconnect(self, websocket):
+        logger.info(f"Disconnected user {websocket.remote_address}")
+        if (prev := self.userRoomMapping.get(websocket)) is not None:
+            await self.user_leave_room(websocket, prev)
+        self.userRoomMapping.pop(websocket)
+        self.userInfoMapping.pop(websocket)
+        await self.broadcast_rooms()
 
     async def handle_connection(self, websocket, path):
         logger.info(f"Connection established: {websocket.remote_address}")
 
+        await self.new_user_connects(websocket)
+
         try:
             async for message in websocket:
-                logger.info(
-                    f"Received message from {websocket.remote_address}: {message}"
-                )
-                data = json.loads(message)
+                try:
+                    logger.info(
+                        f"Received message from {websocket.remote_address}: {message}"
+                    )
+                    data = json.loads(message)
 
-                message_type = data.get("type")
-                if message_type == "init":
-                    await self.handle_init_command(websocket, data)
-                elif message_type == "game":
-                    await self.handle_game_command(websocket, data)
-        except websockets.exceptions.ConnectionClosedError:
-            logger.info(f"Connection closed: {websocket.remote_address}")
-            await self.remove_user(websocket)
+                    message_type = data.get("type")
+                    if message_type == "init":
+                        await self.handle_init_command(websocket, data)
+                    elif message_type == "game":
+                        await self.handle_game_command(websocket, data)
+                except Exception as e:
+                    tb = traceback.format_exc()
+                    logger.critical(f"An error occurred: {e}\n{tb}")
+        finally:
+            logger.warn(f"Connection closed: {websocket.remote_address}")
+            await self.handle_disconnect(websocket)
 
     async def handle_init_command(self, websocket, data):
         command = data.get("command")
@@ -74,163 +157,91 @@ class WebSocketServer:
                 websocket, data.get("name"), data.get("game", "chat")
             )
         elif command == "enter":
-            await self.enter_room(websocket, data.get("name"))
+            await self.handle_enter_room(websocket, data.get("name"))
         elif command == "list":
             await self.send_room_list(websocket)
         elif command == "change_info":
             await self.change_user_info(websocket, data)
         elif command == "get_user_info":
-            await self.get_user_info(websocket)
+            self.get_user_info(websocket)
 
     async def handle_game_command(self, websocket, data):
-        room = self.find_user_room(websocket)
+        room = self.userRoomMapping[websocket]
         if room:
             game_engine_data = data.get("data")
             if game_engine_data:
-                await room.send_game_message(game_engine_data)
+                await room.send_game_message(websocket, game_engine_data)
         else:
-            logger.warning(f"User {websocket.remote_address} is not in any room.")
+            logger.warning(
+                f"User {websocket.remote_address} is not in any room, but sending game commands."
+            )
+            await send_error(websocket, "Not in any room, cannot send game commands.")
 
     async def change_user_info(self, websocket, data):
-        room = self.find_user_room(websocket)
+        room = self.userRoomMapping[websocket]
+        self.userInfoMapping[websocket] = data  # TODO: decode it the right way
         if room:
-            user_info = room.users.get(websocket)
-            if user_info:
-                new_name = data.get("name")
-                new_gender = data.get("gender", user_info.gender)
-                new_avatar = data.get("avatar", user_info.avatar)
+            room.update_info(websocket, self.userInfoMapping[websocket])
+        await self.send_user_status(websocket)
 
-                room.users[websocket] = UserInfo(
-                    name=new_name, gender=new_gender, avatar=new_avatar
-                )
-                await self.send_user_list(room)
-                logger.debug(
-                    f"User {websocket.remote_address} changed their info: {room.users[websocket]}"
-                )
-            else:
-                logger.warning(f"User {websocket.remote_address} not found in room.")
-        else:
-            logger.warning(f"User {websocket.remote_address} is not in any room.")
+    def room_by_name(self, name) -> Optional[Room]:
+        return next((x for x in self.rooms if x.name == name), None)
 
-    async def get_user_info(self, websocket):
-        room = self.find_user_room(websocket)
+    async def handle_enter_room(self, websocket, room_name):
+        if not room_name:  # null or empty
+            logger.info("User leaving any room")
+            await self.user_change_room(websocket, None)
+            return
+
+        room = self.room_by_name(room_name)
         if room:
-            user_info = room.users.get(websocket)
-            if user_info:
-                await websocket.send(
-                    json.dumps(
-                        {
-                            "type": "user_info",
-                            "data": {
-                                "name": user_info.name,
-                                "gender": user_info.gender,
-                                "avatar": user_info.avatar,
-                            },
-                        }
-                    )
-                )
-            else:
-                logger.warning(f"User {websocket.remote_address} not found in room.")
+            await self.user_change_room(websocket, room)
         else:
-            logger.warning(f"User {websocket.remote_address} is not in any room.")
-
-    async def enter_room(self, websocket, room_name):
-        # Remove the user from any existing room
-        await self.remove_user(websocket)
-
-        room = self.rooms.get(room_name)
-        if room:
-            room.users[websocket] = UserInfo(name=f"User{len(room.users) + 1}")
-            await self.send_user_list(room)
-            await self.send_room_list(websocket)
-            await room.notify_user_list_change()
-            logger.debug(f"User entered room: {room_name}")
-        else:
-            await websocket.send(
-                json.dumps({"type": "error", "message": "Room does not exist."})
-            )
-            logger.warning(f"Failed to enter room (does not exist): {room_name}")
-
-    async def send_user_list(self, room):
-        user_list = [
-            {
-                "name": user_info.name,
-                "gender": user_info.gender,
-                "avatar": user_info.avatar,
-            }
-            for user_info in room.users.values()
-        ]
-        await asyncio.gather(
-            *(
-                user.send(json.dumps({"type": "user_list", "data": user_list}))
-                for user in room.users
-            )
-        )
+            logger.error(f"Trying to enter room '{room_name}' that does not exist")
 
     async def send_room_list(self, websocket):
-        # Check and delete empty rooms
-        empty_rooms = [
-            room_name for room_name, room in self.rooms.items() if not room.users
-        ]
-        for empty_room in empty_rooms:
-            del self.rooms[empty_room]
-            logger.debug(f"Room deleted (empty): {empty_room}")
-
         room_list = [
-            {"name": room.name, "userCount": len(room.users)}
-            for room in self.rooms.values()
+            {"name": room.name, "userCount": len(room.users), "game": room.game_engine.game_name()} for room in self.rooms
         ]
         await websocket.send(json.dumps({"type": "rooms", "data": room_list}))
         logger.debug(f"Sent room list to {websocket.remote_address}: {room_list}")
 
-    def find_user_room(self, websocket):
-        for room in self.rooms.values():
-            if websocket in room.users:
-                return room
-        return None
-
-    async def remove_user(self, websocket):
-        room = self.find_user_room(websocket)
-        if room:
-            del room.users[websocket]
-            logger.debug(
-                f"User {websocket.remote_address} removed from room: {room.name}"
-            )
-
-            # Notify other users in the room about the user removal
-            await room.notify_user_list_change()
-
-            # Check if the room is empty and delete it if needed
-            if not room.users:
-                del self.rooms[room.name]
-                logger.debug(f"Room deleted (empty): {room.name}")
-
-            await self.send_room_list(websocket)
-
     async def create_room(self, websocket, room_name, game_type):
-        if room_name in self.rooms:
+        if self.room_by_name(room_name):
             await websocket.send(
                 json.dumps({"type": "error", "message": "Room already exists."})
             )
-            logger.debug(f"Failed to create room (already exists): {room_name}")
+            logger.warning(f"Failed to create room (already exists): {room_name}")
         else:
             game_engine = (
                 ChatGameEngine()
             )  # Change this line if you have other game engines
             new_room = Room(name=room_name, game_engine=game_engine)
-            self.rooms[room_name] = new_room
+            self.rooms.append(new_room)
 
-            # Add the user to the room
-            new_room.users[websocket] = UserInfo(name=f"User1")
+            # add useer to the newly created room
+            await self.user_change_room(websocket, new_room)
 
-            await websocket.send(
-                json.dumps(
-                    {"type": "rooms", "data": [{"name": room_name, "userCount": 1}]}
-                )
+    async def log_everything_forever(self, interval=30):
+        def describeOrNone(room):
+            if room:
+                return room.describe()
+            else:
+                return None
+
+        while True:
+            logger.info("---- Logging everything ----------------------------")
+            rooms = pprint.pformat(list(map(lambda rm: rm.describe(), self.rooms)))
+            logger.info(rooms)
+            users = pprint.pformat(
+                {
+                    key.remote_address: describeOrNone(value)
+                    for key, value in self.userRoomMapping.items()
+                }
             )
-            logger.debug(f"Room created: {room_name}")
-
-            await self.send_room_list(websocket)
+            logger.info(users)
+            logger.info("---- ---- ---- ---- --- ----------------------------")
+            await asyncio.sleep(interval)
 
 
 async def main():
@@ -238,7 +249,7 @@ async def main():
     start_server = websockets.serve(server.handle_connection, "localhost", 8765)
 
     logger.debug("WebSocket server running at ws://localhost:8765/")
-    await start_server
+    await asyncio.gather(start_server, server.log_everything_forever())
 
     # Keep the server running
     await asyncio.Event().wait()
