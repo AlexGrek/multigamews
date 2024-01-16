@@ -34,9 +34,9 @@ class Messenger {
                 return
             }
             if (message.request) {
-                const found = this.subscriptionsOnMessageTypes[message.request]
+                const found = this.subscriptionsOnRequestTypes[message.request]
                 if (found != undefined) {
-                    found(message)
+                    found(message.data)
                     return
                 }
                 console.warn(`No handler for message request: ${message.request}`)
@@ -45,12 +45,16 @@ class Messenger {
         } else {
             console.error("Message has no type in JSON")
         }
-        
+
         if (this.onUnknownType != undefined) {
             this.onUnknownType(message)
             return
         }
         console.error("Message was not read by any handler")
+    }
+
+    public request(name: string) {
+        this.send({ "type": "init", "command": "request", "data": name })
     }
 
     public send(data: any) {

@@ -1,0 +1,21 @@
+.choose-avatar-img {
+    background-size: cover;
+    background-color: black;
+    width: 180px;
+    height: 220px;
+    border-radius: 4px;
+    cursor: pointer;
+    /* margin: 4pt; */
+}
+
+.choose-avatar-img:hover {
+    outline: 1px solid whitesmoke;
+}
+
+.choose-new-avatar-images {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    /* grid-auto-rows: minmax() */
+    grid-gap: 8px;
+    margin: 4pt;
+}

@@ -1,3 +1,23 @@
 .user-info-widget-host {
     display: inline-block;
 }
+
+.user-info-avatar {
+    background-size: cover;
+    background-color: black;
+    width: 220px;
+    height: 280px;
+    border-radius: 6px;
+    margin: 4pt;
+}
+
+.user-info-avatar:hover {
+    outline: 2px solid white;
+    filter: blur(2px);
+    cursor: pointer;
+}
+
+.choose-new-top-menu {
+    display: flex;
+    justify-content: space-between;
+}

@@ -48,7 +48,7 @@ const RoomsLobby: React.FC<RoomsLobbyProps> = ({ rooms, visible, msg }) => {
         if (msg) {
             setSelected(room.name)
             setTimeout(() =>
-                msg.send({"type": "init", "command": "enter", "name": room.name}), 500)
+                msg.send({ "type": "init", "command": "enter", "name": room.name }), 500)
         }
     }
 
@@ -61,9 +61,9 @@ const RoomsLobby: React.FC<RoomsLobbyProps> = ({ rooms, visible, msg }) => {
     const handleNewButtonClick = () => {
         setCreateDialogOpen(false)
         if (msg)
-            msg.send({"type": "init", "command": "create", "name": name})
+            msg.send({ "type": "init", "command": "create", "name": name })
         setName("")
-      };
+    };
 
     return (
         <div>

@@ -102,7 +102,7 @@ const AppWrapper: React.FC<AppWrapperProps> = ({ }) => {
                     <button onClick={handleOpenModalTester}><i className="fas fa-terminal"></i></button>
                 </div>
             </header>
-            {currentRoom || <RoomsLobby msg={msg} rooms={rooms} visible={true} />}
+            {!(currentRoom) && <RoomsLobby msg={msg} rooms={rooms} visible={true} />}
             {currentRoom && currentRoomInfo["game"] === "chat" && <ChatGame msg={msg}/>}
             {currentRoom && currentRoomInfo["game"] === "poker" && <PokerGame msg={msg} user={userInfo}/>}
 
