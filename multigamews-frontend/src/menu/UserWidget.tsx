@@ -4,11 +4,18 @@ import Messenger from '../core/Messenger';
 import './UserWidget.css'
 import Modal from '../common/Modal';
 import ChooseNewAvatar from './ChooseNewAvatar';
+import Choices from '../common/Choices';
 
 interface UserWidgetProps {
     userInfo: UserInfo | null;
     msg: Messenger | null;
 }
+
+const GENDER_OPTIONS = [
+    {"value": "-1", "label": "female"},
+    {"value": "0", "label": "unknown"},
+    {"value": "1", "label": "male"},
+]
 
 const createEmptyUserInfo = () => {
     return {
@@ -56,10 +63,10 @@ const UserWidget: React.FC<UserWidgetProps> = ({ userInfo, msg }) => {
     return (
         <div className='user-info-widget-host'>
             {userWidget}
-            <Modal header="It's you" isOpen={modalOpen} onClose={() => setModalOpen(false)}>
+            <Modal header="It's you" isOpen={modalOpen} onClose={handleUpdate}>
                 {avatarOpen ? <ChooseNewAvatar avatars={avatars} loadNewAvatars={handleLoadNewAvatars} setAvatar={(a) => {setUpdatedUserInfo({...updatedUserInfo, avatar: a}); setAvatarOpen(false)}} cancel={() => setAvatarOpen(false)}/> : avatar}
                 <input onChange={(e) => setUpdatedUserInfo({ ...updatedUserInfo, name: e.target.value })} type='text' value={updatedUserInfo.name}></input>
-                <button onClick={handleUpdate}>Update</button>
+                <Choices value={`${updatedUserInfo.gender}`} options={GENDER_OPTIONS} onChange={(val) => setUpdatedUserInfo({...updatedUserInfo, gender: parseInt(val)})}/>
             </Modal>
         </div>
     );

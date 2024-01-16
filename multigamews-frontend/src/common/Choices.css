@@ -1,0 +1,23 @@
+.choices-container {
+    display: flex;
+    flex-direction: row;
+    max-width: 90%;
+    flex-wrap: wrap;
+}
+
+.choices-container button {
+    margin: 2pt;
+}
+
+.choices-container .selected-choice {
+    cursor:default;
+    color: aliceblue;
+    background-color: rgb(92, 89, 89);
+    box-shadow: inset 0 0 6px #151515;
+}
+
+.choices-container .selected-choice:hover {
+    border-color: black;
+    background-color: rgb(92, 89, 89);
+    
+}
