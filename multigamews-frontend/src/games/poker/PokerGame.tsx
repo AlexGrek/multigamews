@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import Messenger from '../core/Messenger';
-import MicroChat, { MessageInfo } from '../common/MicroChat';
+import Messenger from '../../core/Messenger';
+import MicroChat, { MessageInfo } from '../../common/MicroChat';
+import { UserInfo } from '../../menu/AppWrapper';
 
-interface ChatGameProps {
+interface PokerGameProps {
     msg: Messenger | null;
+    user: UserInfo | null;
 }
 
-const ChatGame: React.FC<ChatGameProps> = ({ msg }) => {
+const PokerGame: React.FC<PokerGameProps> = ({ msg, user }) => {
     const [lastMsg, setLastMsg] = useState<MessageInfo | null>(null)
 
     useEffect(() => {
@@ -25,10 +27,10 @@ const ChatGame: React.FC<ChatGameProps> = ({ msg }) => {
     }
 
     return (
-        <div className='game-main-container slide-in-blurred-top'>
+        <div>
             <MicroChat message={lastMsg} send={handleSend} />
         </div>
     );
 };
 
-export default ChatGame;
+export default PokerGame;

@@ -24,4 +24,5 @@ python main.py
 ## Commands:
 
 - {"type": "init", "command":  "create", "name": "roomName"}
+- {"type": "init", "command":  "request", "data": "avatar_list"}
 - {"type": "init", "command":  "enter", "name": "roomName"}

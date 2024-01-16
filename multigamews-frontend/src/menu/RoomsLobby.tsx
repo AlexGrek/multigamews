@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../common/Modal';
 import Messenger from '../core/Messenger';
+import './RoomsLobby.css';
 
 interface RoomInfo {
     name: string
@@ -18,10 +19,18 @@ const RoomsLobby: React.FC<RoomsLobbyProps> = ({ rooms, visible, msg }) => {
     const [roomsInfo, setRoomsInfo] = useState<RoomInfo[]>(rooms);
     const [createDialogOpen, setCreateDialogOpen] = useState(false)
     const [name, setName] = useState<string>('');
+    const [selected, setSelected] = useState<string | null>(null)
 
     useEffect(() => {
         setRoomsInfo(rooms);
     }, [rooms]);
+
+    const anim = (base: string, entry?: string) => {
+        if (selected) {
+            return `${base} fadeout`
+        }
+        else return entry ? `${base} ${entry}` : base
+    }
 
     const handleOpenCr = () => {
         setCreateDialogOpen(true);
@@ -36,13 +45,16 @@ const RoomsLobby: React.FC<RoomsLobbyProps> = ({ rooms, visible, msg }) => {
     };
 
     const enterRoom = (room: RoomInfo) => {
-        if (msg)
-            msg.send({"type": "init", "command": "enter", "name": room.name})
+        if (msg) {
+            setSelected(room.name)
+            setTimeout(() =>
+                msg.send({"type": "init", "command": "enter", "name": room.name}), 500)
+        }
     }
 
     const renderRooms = () => {
         return roomsInfo.map((room) => {
-            return <button onClick={() => enterRoom(room)} className='room-button swing-in-top-fwd' key={room.name}>{room.name} ({room.game}) [{room.userCount}]</button>
+            return <button className={anim("room-button", "swing-in-top-fwd")} onClick={() => enterRoom(room)} key={room.name}>{room.name} ({room.game}) [{room.userCount}]</button>
         })
     }
 
@@ -56,8 +68,8 @@ const RoomsLobby: React.FC<RoomsLobbyProps> = ({ rooms, visible, msg }) => {
     return (
         <div>
             {visible && renderRooms()}
-            <button className='room-button new-room swing-in-top-fwd' onClick={handleOpenCr}>Create</button>
-            <Modal isOpen={createDialogOpen} onClose={handleCloseCr}>
+            <button className={anim("room-button new-room", "swing-in-top-fwd")} onClick={handleOpenCr}>Create</button>
+            <Modal header="Create new room" isOpen={createDialogOpen} onClose={handleCloseCr}>
                 Name:
                 <input
                     type="text"

@@ -3,6 +3,7 @@ type StringToFunctionMap = Record<string, (data: any) => void>;
 class Messenger {
     websocket: WebSocket;
     subscriptionsOnMessageTypes: StringToFunctionMap = {}
+    subscriptionsOnRequestTypes: StringToFunctionMap = {}
     onUnknownType?: (data: any) => void
 
     constructor(ws: WebSocket) {
@@ -12,6 +13,10 @@ class Messenger {
 
     public onMessageType(name: string, action: (data: any) => void) {
         this.subscriptionsOnMessageTypes[name] = action
+    }
+
+    public onResponseType(name: string, action: (data: any) => void) {
+        this.subscriptionsOnRequestTypes[name] = action
     }
 
     public onUnknownMessageType(action: (data: any) => void) {
@@ -27,6 +32,14 @@ class Messenger {
             if (found != undefined) {
                 found(message)
                 return
+            }
+            if (message.request) {
+                const found = this.subscriptionsOnMessageTypes[message.request]
+                if (found != undefined) {
+                    found(message)
+                    return
+                }
+                console.warn(`No handler for message request: ${message.request}`)
             }
             console.warn(`No handler for message type: ${messageType}`)
         } else {

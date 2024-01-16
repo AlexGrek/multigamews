@@ -1,4 +1,5 @@
 import asyncio
+import random
 from typing import Dict, List, Optional
 from room import Room, generate_user_info
 import websockets
@@ -10,6 +11,9 @@ import utils
 import pprint
 from colorlog import ColoredFormatter
 import traceback
+
+PUBLIC_PATH = "../multigamews-frontend/public/"
+AVATAR_PATH = "avatars/"
 
 # Configure colorlog
 formatter = ColoredFormatter(
@@ -116,6 +120,24 @@ class WebSocketServer:
             roomgame = room.status(websocket)
         await websocket.send(json.dumps({"type": "status", "data": asdict(UserStatus(info=info, room=roomname, game_status=roomgame))}))
         
+    async def get_request(self, websocket, data):
+        try:
+            result = await self.process_response(websocket, data)
+            await websocket.send(json.dumps({"type": "response", "request": data, "data": result}))
+        except Exception as e:
+            logger.error(f"Error while processing request {data}: {e}")
+            await websocket.send(json.dumps({"type": "response", "request": data, "error": f"Error: {e}"}))
+        
+    async def process_response(self, websocket, data):
+        async def avatars():
+            return [x.replace("\\", "/").replace(PUBLIC_PATH, "") for x in await utils.list_files(PUBLIC_PATH+AVATAR_PATH)]
+        if data == "avatar_list":
+            return await avatars()
+        if data == "avatar_list_9":
+            all = await avatars()
+            return random.sample(all, 9)
+        else:
+            raise ValueError(f"Unknown request: {data}")
 
     async def handle_disconnect(self, websocket):
         logger.info(f"Disconnected user {websocket.remote_address}")
@@ -161,9 +183,11 @@ class WebSocketServer:
         elif command == "list":
             await self.send_room_list(websocket)
         elif command == "change_info":
-            await self.change_user_info(websocket, data)
+            await self.change_user_info(websocket, data.get("data"))
+        elif command == "request":
+            await self.get_request(websocket, data.get("data"))
         elif command == "get_user_info":
-            self.get_user_info(websocket)
+            await self.send_user_status(websocket)
 
     async def handle_game_command(self, websocket, data):
         room = self.userRoomMapping[websocket]
@@ -179,7 +203,7 @@ class WebSocketServer:
 
     async def change_user_info(self, websocket, data):
         room = self.userRoomMapping[websocket]
-        self.userInfoMapping[websocket] = data  # TODO: decode it the right way
+        self.userInfoMapping[websocket] = UserInfo(**data)
         if room:
             room.update_info(websocket, self.userInfoMapping[websocket])
         await self.send_user_status(websocket)
@@ -232,14 +256,21 @@ class WebSocketServer:
         while True:
             logger.info("---- Logging everything ----------------------------")
             rooms = pprint.pformat(list(map(lambda rm: rm.describe(), self.rooms)))
-            logger.info(rooms)
+            logger.info("Rooms:" + rooms)
             users = pprint.pformat(
                 {
                     key.remote_address: describeOrNone(value)
                     for key, value in self.userRoomMapping.items()
                 }
             )
-            logger.info(users)
+            logger.info("Users: " + users)
+            info = pprint.pformat(
+                {
+                    key.remote_address: pprint.pformat(value)
+                    for key, value in self.userInfoMapping.items()
+                }
+            )
+            logger.info("UserInfo: " + info)
             logger.info("---- ---- ---- ---- --- ----------------------------")
             await asyncio.sleep(interval)
 

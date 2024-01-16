@@ -9,6 +9,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
+    z-index: 100;
   }
   
   .modal {
@@ -17,6 +18,25 @@
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    min-width: 400pt;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    max-height: 90%;
+    overflow: auto;
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 7pt;
+    align-items: baseline;
+  }
+
+  .modal-header-text {
+    font-weight: lighter;
+    font-size: larger;
   }
   
   .close-button {
@@ -34,3 +54,14 @@
     background: #777; /* Dark button background color on hover */
   }
   
+.modal button, .modal input {
+  display:block;
+}
+
+.modal input {
+  width: 90%;
+  text-align: center;
+  margin: 4pt;
+  font-size: large;
+
+}

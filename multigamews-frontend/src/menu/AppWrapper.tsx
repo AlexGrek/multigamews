@@ -6,8 +6,10 @@ import RoomsLobby from './RoomsLobby';
 import Messenger from '../core/Messenger';
 import CurrentRoomWidget from './CurrentRoomWidget';
 import ChatGame from '../games/Chat';
+import PokerGame from '../games/poker/PokerGame';
+import UserWidget from './UserWidget';
 
-interface UserInfo {
+export interface UserInfo {
     name: string,
     gender: number,
     avatar?: string
@@ -83,9 +85,7 @@ const AppWrapper: React.FC<AppWrapperProps> = ({ }) => {
         {connected ? <i className="fas fa-signal"></i> : <i className="fas fa-spinner spin"></i>}
     </button>
 
-const userWidget = <button>
-    <i className="fas fa-user-tie"></i>   {userInfo && userInfo.name}
-</button>
+
 
     return (
         <div>
@@ -97,15 +97,16 @@ const userWidget = <button>
                     {currentRoom && <CurrentRoomWidget currentRoom={currentRoom} msg={msg}></CurrentRoomWidget>}
                 </div>
                 <div className='header-right'>
-                    {userWidget}
+                    <UserWidget userInfo={userInfo} msg={msg}/>
                     {connectionWidget}
                     <button onClick={handleOpenModalTester}><i className="fas fa-terminal"></i></button>
                 </div>
             </header>
             {currentRoom || <RoomsLobby msg={msg} rooms={rooms} visible={true} />}
             {currentRoom && currentRoomInfo["game"] === "chat" && <ChatGame msg={msg}/>}
+            {currentRoom && currentRoomInfo["game"] === "poker" && <PokerGame msg={msg} user={userInfo}/>}
 
-            <Modal isOpen={wsTesterOpen} onClose={handleCloseModalTester}>
+            <Modal header="websocket test" isOpen={wsTesterOpen} onClose={handleCloseModalTester}>
                 <WebSocketTest />
             </Modal>
         </div>
