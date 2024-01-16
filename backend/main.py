@@ -205,7 +205,7 @@ class WebSocketServer:
         room = self.userRoomMapping[websocket]
         self.userInfoMapping[websocket] = UserInfo(**data)
         if room:
-            room.update_info(websocket, self.userInfoMapping[websocket])
+            await room.update_info(websocket, self.userInfoMapping[websocket])
         await self.send_user_status(websocket)
 
     def room_by_name(self, name) -> Optional[Room]:
