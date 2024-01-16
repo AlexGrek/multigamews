@@ -5,8 +5,19 @@
     align-items: baseline;
     align-content: space-between;
     justify-content: space-between;
-    background-color: #071e03;
-    box-shadow: 0px 1px 8px 0px rgba(0,0,0,0.75);
+    background-color: #1a2116;
+    box-shadow: 0px 0px 10px 0px rgba(0,0,0,0.55);
+}
+
+.main-header button {
+    border-radius: 2px;
+    font-size: small;
+    background-color: #212124aa;
+    margin-right: 3px;
+}
+
+.main-header button:hover {
+    background-color: #373c35aa;
 }
 
 .header-left, .header-right {
