@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Messenger from '../../core/Messenger';
 import MicroChat, { MessageInfo } from '../../common/MicroChat';
 import { UserInfo } from '../../menu/AppWrapper';
+import './PokerGame.css'
 
 interface PokerGameProps {
     msg: Messenger | null;
@@ -27,7 +28,8 @@ const PokerGame: React.FC<PokerGameProps> = ({ msg, user }) => {
     }
 
     return (
-        <div>
+        <div className='poker-root'>
+            
             <MicroChat message={lastMsg} send={handleSend} />
         </div>
     );
