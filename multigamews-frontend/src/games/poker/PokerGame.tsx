@@ -62,6 +62,9 @@ const PokerGame: React.FC<PokerGameProps> = ({ msg, user }) => {
         if (msg != null) {
             msg.onMessageType("game", (message) => {
                 const data = message.data
+                if (data.type === 'status') {
+                    setStatus(data.status)
+                }
                 if (data.type === 'chat') {
                     setLastMsg({ "text": data.text, "sender": data.sender.name })
                 }
