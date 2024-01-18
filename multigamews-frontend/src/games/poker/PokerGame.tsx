@@ -9,6 +9,44 @@ interface PokerGameProps {
     user: UserInfo | null;
 }
 
+interface Seat {
+    info: UserInfo | null
+    ai: boolean
+}
+
+interface PokerGameSetup {
+    gameName: "holdem"
+    seats: Seat[]
+}
+
+interface PokerAction {
+    action: "call" | "check" | "fold" | "fold_show" | "bet" | "raise"
+    amount: number
+}
+
+interface PokerPlayer {
+    stack: number
+    bet: number | null
+    cards: string[]
+    folded: boolean
+    lastAction?: PokerAction
+    isAllIn: boolean
+}
+
+interface PokerGamePlaying {
+    players: (PokerPlayer | null)[]
+    dealer: number
+    turn: number
+    table: string[]
+    bank: number
+}
+
+interface PokerGameStatus {
+    stage: "playing" | "setup" | "result"
+    setup: PokerGameSetup
+    playing?: PokerGamePlaying
+}
+
 const PokerGame: React.FC<PokerGameProps> = ({ msg, user }) => {
     const [lastMsg, setLastMsg] = useState<MessageInfo | null>(null)
 
