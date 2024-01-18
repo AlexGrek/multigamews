@@ -19,6 +19,13 @@ interface PokerGameSetup {
     seats: Seat[]
 }
 
+function genLoadingSetup(): PokerGameSetup {
+    return {
+        gameName: "holdem",
+        seats: []
+    }
+}
+
 interface PokerAction {
     action: "call" | "check" | "fold" | "fold_show" | "bet" | "raise"
     amount: number
@@ -42,13 +49,14 @@ interface PokerGamePlaying {
 }
 
 interface PokerGameStatus {
-    stage: "playing" | "setup" | "result"
+    stage: "playing" | "setup" | "result" | "loading"
     setup: PokerGameSetup
     playing?: PokerGamePlaying
 }
 
 const PokerGame: React.FC<PokerGameProps> = ({ msg, user }) => {
     const [lastMsg, setLastMsg] = useState<MessageInfo | null>(null)
+    const [status, setStatus] = useState<PokerGameStatus>({stage: "loading", setup: genLoadingSetup()})
 
     useEffect(() => {
         if (msg != null) {
@@ -65,9 +73,23 @@ const PokerGame: React.FC<PokerGameProps> = ({ msg, user }) => {
         msg?.send({ type: 'game', data: { type: 'chat', text } })
     }
 
+    const main = () => {
+        const stage = status.stage
+        if (stage == "loading") {
+            return <div><h2>Loading...</h2></div>
+        }
+        if (stage == "setup") {
+            return <div>setup screen</div>
+        }
+        if (stage == "playing") {
+            return <div>game screen</div>
+        }
+        return <div><h2>Unsupported stage</h2></div>
+    }
+
     return (
         <div className='poker-root'>
-            
+            {main()}
             <MicroChat message={lastMsg} send={handleSend} />
         </div>
     );
