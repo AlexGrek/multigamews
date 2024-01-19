@@ -1,52 +1,62 @@
 from dataclasses import asdict
+from poker.poker_runtime_holdem import PokerAction, PokerGamePlaying
+import utils
 import json
 import logging
+from pydantic.json import pydantic_encoder
 
 import websockets
 from game_engine import GameEngine, UserInfo
 from typing import List, Optional, Union
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 
 logger = logging.getLogger(__name__)
 
 
 class Seat(BaseModel):
-    websocket: object = Field(..., alias="websocket", repr=False)
-    info: dict
+    websocket_uid: str 
+    info: UserInfo
     ai: bool
-
+    
+    class Config:
+        fields = {"info": ..., "ai": ...}
+        arbitrary_types_allowed=True
+        
+    @validator("*", pre=True)
+    def check_websocket(cls, v):
+        # websocket validation
+        return v
 
 class PokerGameSetup(BaseModel):
     gameName: str = "holdem"
     seats: List[Optional[Seat]]
 
 
-class PokerAction(BaseModel):
-    action: str
-    amount: int
-
-
-class PokerPlayer(BaseModel):
-    stack: int
-    bet: Union[int, None]
-    cards: List[str]
-    folded: bool
-    lastAction: PokerAction = None
-    isAllIn: bool
-
-
-class PokerGamePlaying(BaseModel):
-    players: List[Union[PokerPlayer, None]]
-    dealer: int
-    turn: int
-    table: List[str]
-    bank: int
-
-
 class PokerGameStatus(BaseModel):
     stage: str
     setup: PokerGameSetup
-    playing: PokerGamePlaying = None
+    playing: Optional[PokerGamePlaying] = None
+
+class PokerGameStatusPersonal(BaseModel):
+    websocket_uid: str
+    seat: int
+    expected_actions: list[PokerAction]
+
+class PokerGameStatusMessageData(BaseModel):
+    type: str = Field(default="status", alias="type")
+    status: PokerGameStatus
+    personal: Optional[PokerGameStatusPersonal]
+
+    class Config:
+        allow_population_by_field_name = True
+
+
+class PokerGameStatusMessage(BaseModel):
+    type: str = Field(default="game", alias="type")
+    data: PokerGameStatusMessageData
+
+    class Config:
+        allow_population_by_field_name = True
 
 
 def create_new_setup():
@@ -59,6 +69,7 @@ def create_new_setup():
 class PokerGameEngine(GameEngine):
     def __init__(self):
         self.state = create_new_setup()
+        self.websocket_uid_mapping = {}
 
     def game_name(self):
         return "poker"
@@ -69,28 +80,68 @@ class PokerGameEngine(GameEngine):
         return asdict(userinfo)
 
     async def broadcast_room_state(self, room):
-        state_json = json.dumps(
-            {"type": "game", "data": {"type": "status", "status": self.state}}
-        )
+        logger.info(f"Sending POKER update to {room.users} users: {self.state.model_dump()}")
+        state_json = PokerGameStatusMessage(**{"type": "game", "data": {"type": "status", "personal": None, "status": self.state}}).model_dump_json()
         logger.info(state_json)
 
         for user in room.users:
-            await user.send(state_json)
+            await self.send_status(user)
+
+    def get_personal_status(self, websocket):
+        seat = self.user_index_by_websocket(websocket)
+        websocket_uid = self.get_websocket_uid_mapping(websocket)
+        return {"seat": seat, "websocket_uid": websocket_uid, "expected_actions": []}
+
+    async def send_status(self, websocket):
+        state_json = PokerGameStatusMessage(**{"type": "game", "data": {"type": "status", "personal": self.get_personal_status(websocket), "status": self.state}}).model_dump_json()
+        await websocket.send(state_json)
+
+    async def get_status(self, websocket, userinfo: UserInfo):
+        logger.info(f"User {userinfo.name} requested poker game status, sending...")
+        await self.send_status(websocket)
+
+    def get_websocket_uid_mapping(self, websocket):
+        if websocket in self.websocket_uid_mapping:
+            return self.websocket_uid_mapping[websocket]
+        genereated = utils.generate_random_string(16)
+        self.websocket_uid_mapping[websocket] = genereated
+        return genereated
 
     def user_index_by_websocket(self, websocket):
+        uid = self.get_websocket_uid_mapping(websocket)
         for i, seat in enumerate(self.state.setup.seats):
-            if seat and seat.websocket == websocket:
+            if seat and seat.websocket_uid == uid:
                 return i
         return -1
+    
+    async def user_list_changed(self, room, added, removed):
+        for user in removed:
+            undex = self.user_index_by_websocket(user)
+            if undex >= 0:
+                self.state.setup.seats[undex] = None
+        await self.broadcast_room_state(room)
+
+    async def update_setup(self, updates, room):
+        if upd := updates.get("gameName"):
+            self.state.setup.gameName = upd
+        await self.broadcast_room_state(room)
+    
 
     async def take_seat(self, room, websocket, userinfo: UserInfo, seat_index):
         logger.info(f"User {userinfo.name} takes seat {seat_index}")
         self.state.setup.seats[seat_index] = Seat(
-            websocket=websocket, info=self.userinfo_to_dict(userinfo), ai=False
+            websocket_uid=self.get_websocket_uid_mapping(websocket), info=self.userinfo_to_dict(userinfo), ai=False
         )
         await self.broadcast_room_state(room)
 
     async def handle_message(self, room, websocket, message, userinfo):
+        if message.get("type") == "get_status":
+            await self.get_status(websocket, userinfo)
+        if message.get("type") == "change_options":
+            if self.state.stage != "setup":
+                await utils.send_error(websocket, "Cannot change options while not in setup state")
+            else:
+                await self.update_setup(message.get("data"), room)
         if message.get("type") == "take_seat":
             seat_to_take = message.get("data")
             # free any seat if it was already taken by this user

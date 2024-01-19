@@ -1,4 +1,5 @@
 import asyncio
+import json
 from pathlib import Path
 import random
 import string
@@ -12,3 +13,7 @@ def generate_random_string(length=5):
 async def list_files(path):
     path = Path(path)
     return [str(entry) for entry in await asyncio.to_thread(list, filter(Path.is_file, path.iterdir()))]
+
+
+async def send_error(websocket, text):
+    await websocket.send(json.dumps({"type": "error", "message": text}))

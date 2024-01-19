@@ -1,6 +1,7 @@
 import asyncio
 import random
 from typing import Dict, List, Optional
+from poker.pokergame import PokerGameEngine
 from room import Room, generate_user_info
 import websockets
 import json
@@ -50,10 +51,6 @@ class UserStatus:
     game_status: Optional[any]
 
 
-async def send_error(websocket, text):
-    await websocket.send(json.dumps({"type": "error", "message": text}))
-
-
 class WebSocketServer:
     def __init__(self):
         self.rooms: List[Room] = []
@@ -99,7 +96,7 @@ class WebSocketServer:
         # check if the room exists now
         if room is not None and not room in self.rooms:
             logger.error(f"Attempt to enter removed room: {room.describe()}")
-            await send_error(
+            await utils.send_error(
                 websocket, f"Cannot enter room '{room.describe}': does not exist"
             )
             room = None
@@ -199,7 +196,7 @@ class WebSocketServer:
             logger.warning(
                 f"User {websocket.remote_address} is not in any room, but sending game commands."
             )
-            await send_error(websocket, "Not in any room, cannot send game commands.")
+            await utils.send_error(websocket, "Not in any room, cannot send game commands.")
 
     async def change_user_info(self, websocket, data):
         room = self.userRoomMapping[websocket]
@@ -238,7 +235,7 @@ class WebSocketServer:
             logger.warning(f"Failed to create room (already exists): {room_name}")
         else:
             game_engine = (
-                ChatGameEngine()
+                ChatGameEngine() if game_type == "chat" else PokerGameEngine()
             )  # Change this line if you have other game engines
             new_room = Room(name=room_name, game_engine=game_engine)
             self.rooms.append(new_room)

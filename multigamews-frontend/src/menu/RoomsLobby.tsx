@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Modal from '../common/Modal';
 import Messenger from '../core/Messenger';
 import './RoomsLobby.css';
+import Choices from '../common/Choices';
 
 interface RoomInfo {
     name: string
@@ -19,6 +20,7 @@ const RoomsLobby: React.FC<RoomsLobbyProps> = ({ rooms, visible, msg }) => {
     const [roomsInfo, setRoomsInfo] = useState<RoomInfo[]>(rooms);
     const [createDialogOpen, setCreateDialogOpen] = useState(false)
     const [name, setName] = useState<string>('');
+    const [gameType, setGameType] = useState<string>('poker');
     const [selected, setSelected] = useState<string | null>(null)
 
     useEffect(() => {
@@ -61,7 +63,7 @@ const RoomsLobby: React.FC<RoomsLobbyProps> = ({ rooms, visible, msg }) => {
     const handleNewButtonClick = () => {
         setCreateDialogOpen(false)
         if (msg)
-            msg.send({ "type": "init", "command": "create", "name": name })
+            msg.send({ "type": "init", "command": "create", "name": name, "game": gameType })
         setName("")
     };
 
@@ -76,11 +78,12 @@ const RoomsLobby: React.FC<RoomsLobbyProps> = ({ rooms, visible, msg }) => {
                     value={name}
                     onChange={handleInputChange}
                 />
-
+                <Choices value={gameType} options={[{ value: "poker", label: "poker" }, { value: "chat", "label": "chat" }]} onChange={(v) => setGameType(v)} ></Choices>
                 <button
                     onClick={handleNewButtonClick}
                     disabled={name.trim() === ''} // Disable the button if the input is empty
                 >
+
                     Create
                 </button>
             </Modal>

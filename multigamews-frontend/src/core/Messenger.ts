@@ -5,6 +5,7 @@ class Messenger {
     subscriptionsOnMessageTypes: StringToFunctionMap = {}
     subscriptionsOnRequestTypes: StringToFunctionMap = {}
     onUnknownType?: (data: any) => void
+    counter = 0
 
     constructor(ws: WebSocket) {
         this.websocket = ws
@@ -13,6 +14,10 @@ class Messenger {
 
     public onMessageType(name: string, action: (data: any) => void) {
         this.subscriptionsOnMessageTypes[name] = action
+    }
+
+    public incCounter() {
+        this.counter += 1
     }
 
     public onResponseType(name: string, action: (data: any) => void) {

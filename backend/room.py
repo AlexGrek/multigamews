@@ -21,11 +21,13 @@ class Room:
 
     async def add(self, websocket, info: UserInfo):
         self.users[websocket] = info
+        await self.game_engine.user_list_changed(self, [websocket], [])
         await self.notify_user_list_change()
 
     async def remove(self, websocket):
         if websocket in self.users:
             self.users.pop(websocket)
+        await self.game_engine.user_list_changed(self, [], [websocket])
         await self.notify_user_list_change()
 
     async def update_info(self, websocket, info: UserInfo):

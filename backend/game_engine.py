@@ -18,6 +18,9 @@ class GameEngine:
     
     def game_name(self):
         return None
+    
+    async def user_list_changed(self, room, added, removed):
+        pass
 
 class ChatGameEngine(GameEngine):
     def game_name(self):
