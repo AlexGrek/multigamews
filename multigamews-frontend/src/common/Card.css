@@ -1,0 +1,32 @@
+.card-base {
+    background-color: antiquewhite;
+    width: 2em;
+    height: 3em;
+    margin-right: 3px;
+    border-radius: 4px;
+    padding: 2px;
+}
+
+.card-base p {
+    margin: 0;
+}
+
+.card-suite {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.card-suite.black {
+    color: black;
+}
+
+.card-suite.red {
+    color: red;
+}
+
+.card-value {
+    color: black;
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: bold;
+    text-align: right;
+    font-size: larger;
+}

@@ -1,5 +1,7 @@
 import React from 'react';
 import { UserInfo } from '../../menu/AppWrapper';
+import Card from '../../common/Card';
+import CardStack from '../../common/CardStack';
 
 export interface Seat {
     info: UserInfo | null
@@ -37,11 +39,29 @@ const PokerSeat: React.FC<PokerSeatProps> = ({ seat, isMe, pokerPlayer, isTurn }
         }
     }
 
+    const renderLastAction = (player: PokerPlayer) => {
+        return <p className='poker-last-action'>{player.lastAction?.action}</p>
+    }
+
     const renderBottom = (player: PokerPlayer) => {
         return <div className='poker-player-bottom-panel'>
             <p>{player.stack}</p>
+            {renderLastAction(player)}
         </div>
     }
+
+    const renderSeatBet = () => {
+        if (pokerPlayer?.bet) {
+            return <div className='poker-seat-bet'>{pokerPlayer?.bet}</div>
+        }
+    }
+
+    const renderSeatCards = () => {
+        if (pokerPlayer && pokerPlayer.cards.length > 0) {
+            return <div className='poker-seat-cards'><CardStack cards={pokerPlayer.cards}/></div>
+        }
+    }
+
 
     return (
         <div className={genClass("poker-seat poker-seat-container")} style={{backgroundImage: `url("${seat?.info?.avatar}")`}}>
@@ -49,7 +69,8 @@ const PokerSeat: React.FC<PokerSeatProps> = ({ seat, isMe, pokerPlayer, isTurn }
                 <p>{seat.info?.name}</p>
             </div>
             <div className='poker-seat-popup'>
-
+                {renderSeatBet()}
+                {renderSeatCards()}
             </div>
             <div className='poker-seat-bottom'>
                 {pokerPlayer && renderBottom(pokerPlayer)}

@@ -5,6 +5,8 @@ import { UserInfo } from '../../menu/AppWrapper';
 import './PokerGame.css'
 import Choices from '../../common/Choices';
 import PokerSeat, { PokerAction, PokerPlayer, Seat } from './PokerSeat';
+import PokerTable from './PokerTable';
+import PokerActions from './PokerActions';
 
 interface PokerGameProps {
     msg: Messenger | null;
@@ -29,6 +31,7 @@ interface PokerGamePlaying {
     turn: number
     table: string[]
     bank: number
+    expected_actions: PokerAction[]
 }
 
 interface PokerGameStatus {
@@ -45,7 +48,7 @@ interface PersonalGameStatus {
 
 const PokerGame: React.FC<PokerGameProps> = ({ msg, user }) => {
     const [lastMsg, setLastMsg] = useState<MessageInfo | null>(null)
-    const [status, setStatus] = useState<PokerGameStatus>({stage: "loading", setup: genLoadingSetup()})
+    const [status, setStatus] = useState<PokerGameStatus>({ stage: "loading", setup: genLoadingSetup() })
     const [personal, setPersonal] = useState<PersonalGameStatus | null>(null)
 
     useEffect(() => {
@@ -76,13 +79,13 @@ const PokerGame: React.FC<PokerGameProps> = ({ msg, user }) => {
         msg?.send({ type: 'game', data: { type: 'take_seat', data: seat } })
     }
 
-    const renderSeats = () => {
+    const renderSeats = (selectSeat: boolean = false) => {
         return status.setup.seats.map((seat, i) => {
             if (seat == null) {
-            return <div key={i} className='poker-seat poker-setup-seat'>
-                <p>{i+1}</p>
-                <button className='poker-take-seat-button' onClick={() => handleTakeSeat(i)}>Take</button>
-            </div>
+                return <div key={i} className='poker-seat poker-setup-seat'>
+                    <p>{i + 1}</p>
+                    {selectSeat && <button className='poker-take-seat-button' onClick={() => handleTakeSeat(i)}>Take</button>}
+                </div>
             } else {
                 let player = null
                 let turn = false
@@ -90,24 +93,51 @@ const PokerGame: React.FC<PokerGameProps> = ({ msg, user }) => {
                     player = status.playing.players[i]
                     turn = status.playing.turn === i
                 }
-                return <PokerSeat seat={seat} isMe={i === personal?.seat} pokerPlayer={player} isTurn={turn}/>
+                return <PokerSeat seat={seat} isMe={i === personal?.seat} pokerPlayer={player} isTurn={turn} />
             }
         })
     }
 
+    const renderSeatsAndTable = () => {
+        if (status.playing) {
+            return [...renderSeats(false), <PokerTable tableCards={status.playing.table} bank={status.playing.bank}/>]
+        }
+        else {
+            return renderSeats(false)
+        }
+    }
+
+    const handleStartButtonClick = () => {
+        msg?.send({ "type": "game", "data": { "type": "start" } })
+    }
+
     const setupScreen = () => {
         function handleChangeSettings(arg0: { gameName: string; }): void {
-            const statusUpdate = {...status, ...arg0}
+            const statusUpdate = { ...status, ...arg0 }
             setStatus(statusUpdate)
-            msg?.send({"type": "game", "data": { "type": "change_options", "data": statusUpdate.setup }})
+            msg?.send({ "type": "game", "data": { "type": "change_options", "data": statusUpdate.setup } })
         }
 
         return <div>
-            <Choices value={status.setup.gameName} options={[{value: 'holdem', label: "Texas Holdem"}]} onChange={(val) => handleChangeSettings({"gameName": val})}/>
+            <Choices value={status.setup.gameName} options={[{ value: 'holdem', label: "Texas Holdem" }]} onChange={(val) => handleChangeSettings({ "gameName": val })} />
             <div>
                 <h3>Seats</h3>
                 <p>Take any empty seat you want</p>
-                <div className='poker-take-seats-container'>{renderSeats()}</div>
+                <div className='poker-take-seats-container'>{renderSeats(true)}</div>
+            </div>
+            <div><button className='start-button' onClick={handleStartButtonClick}>Start</button></div>
+        </div>
+    }
+
+    const handleAct = (action: PokerAction, value: number = 0) => {
+        msg?.send({ "type": "game", "data": { "type": "action", "data": {...action, amount: value } }})
+    }
+
+    const gameScreen = () => {
+        return <div>
+            <div>
+                <div className='poker-take-seats-container'>{renderSeatsAndTable()}</div>
+                <div className='poker-actions-container'><PokerActions onAct={handleAct} myTurn={status.playing?.turn === personal?.seat} actions={status.playing?.expected_actions}/></div>
             </div>
         </div>
     }
@@ -121,7 +151,7 @@ const PokerGame: React.FC<PokerGameProps> = ({ msg, user }) => {
             return <div className='poker-setup-screen'>{setupScreen()}</div>
         }
         if (stage == "playing") {
-            return <div>game screen</div>
+            return <div className='poker-game-screen'>{gameScreen()}</div>
         }
         return <div><h2>Unsupported stage</h2></div>
     }

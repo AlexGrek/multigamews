@@ -1,0 +1,4 @@
+.card-stack {
+    display: flex;
+    flex-direction: row;
+}

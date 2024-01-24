@@ -218,6 +218,7 @@ def process_user_action(game: PokerGamePlaying, action: PokerAction):
 
     player = game.players[game.turn]
     verifyAction(action)
+    player.lastAction = action
     if action.action == "call":
         called = player.do_call(action.amount)
         game.comment(f"User $$ calls {called}", game.turn)
@@ -385,6 +386,10 @@ def game_next(game: PokerGamePlaying, deck: Deck, response: UserResponse):
         win_round_start_next(players_left)
     game.next_not_folded_turn()
     options_for_next_round(game)
+
+
+def create_deck():
+    return Deck()
 
 
 if __name__ == "__main__":
