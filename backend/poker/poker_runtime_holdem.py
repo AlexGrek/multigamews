@@ -61,6 +61,13 @@ class PokerPlayer(BaseModel):
         self.folded = True
 
 
+class VictoryRecord(BaseModel):
+    folded: bool
+    winners: List[int]
+    won: int
+    combination: Optional[str]
+
+
 class PokerGamePlaying(BaseModel):
     players: List[Union[PokerPlayer, None]]
     dealer: int
@@ -70,6 +77,7 @@ class PokerGamePlaying(BaseModel):
     bank: int
     small_blind: int
     total_turns: int = 0
+    last_round_victory: Optional[VictoryRecord] = None
     comments: List[PokerComment] = []
 
     def comment(self, text, seats=[]):
@@ -239,18 +247,26 @@ def process_user_action(game: PokerGamePlaying, action: PokerAction):
     player.acted = True
 
 
-def win_round_start_next(game: PokerGamePlaying, winners_indices, deck):
-    win_game(game, winners_indices)
+def win_round_start_next(
+    game: PokerGamePlaying, winners_indices, winner_combination, deck
+):
+    win_game(game, winners_indices, winner_combination)
     start_round(game, deck)
 
 
-def win_game(game: PokerGamePlaying, winners_indices):
+def win_game(game: PokerGamePlaying, winners_indices, winner_combination):
     """Give prizes to the winners"""
+    win = int(game.bank / len(winners_indices))
     for winner in winners_indices:
         player = game.players[winner]
-        win = int(game.bank / len(winners_indices))
         player.stack += int(win)
         game.comment(f"User $$ wins {win}!", winner)
+    game.last_round_victory = VictoryRecord(
+        folded=True if winner_combination == None else False,
+        winners=winners_indices,
+        won=win,
+        combination=winner_combination,
+    )
 
 
 def find_max_bet(game, players_left):
@@ -307,7 +323,7 @@ def showdown(game: PokerGamePlaying):
     def evaluate_cards(board, cards: List[str]):
         hand = [Card.new(x) for x in cards]
         return ev.evaluate(hand, board)
-    
+
     game.comment("showdown")
 
     board = [Card.new(x) for x in game.table]
@@ -320,11 +336,17 @@ def showdown(game: PokerGamePlaying):
     sorted_results.sort(key=lambda item: item[1])
     winner_number = sorted_results[0][1]
     print(sorted_results)
-    return [
+    winners = [
         sorted_result[0]
         for sorted_result in sorted_results
         if sorted_result[1] == winner_number
     ]
+    return VictoryRecord(
+        folded=False,
+        winners=winners,
+        won=0,
+        combination=ev.class_to_string(ev.get_rank_class(evaluate_cards(board, players[winners[0]]))),
+    )
 
 
 def next_bettinground(game: PokerGamePlaying, deck: Deck):
@@ -381,9 +403,14 @@ def game_next(game: PokerGamePlaying, deck: Deck, response: UserResponse):
         end_bettinground(game)
         result = next_bettinground(game, deck)
         if result:
-            win_round_start_next(game, result, deck)
+            win_round_start_next(game, result.winners, result.combination, deck)
     if len(players_left) < 2:
-        win_round_start_next(players_left)
+        win_round_start_next(
+            game,
+            players_left,
+            None,
+            deck
+        )
     game.next_not_folded_turn()
     options_for_next_round(game)
 
@@ -408,8 +435,12 @@ if __name__ == "__main__":
     )
     game_next(game, deck, UserResponse(action=PokerAction(action="check"), seat=4))
     game_next(game, deck, UserResponse(action=PokerAction(action="check"), seat=3))
-    game_next(game, deck, UserResponse(action=PokerAction(action="bet", amount=100), seat=4))
-    game_next(game, deck, UserResponse(action=PokerAction(action="call", amount=100), seat=3))
+    game_next(
+        game, deck, UserResponse(action=PokerAction(action="bet", amount=100), seat=4)
+    )
+    game_next(
+        game, deck, UserResponse(action=PokerAction(action="call", amount=100), seat=3)
+    )
     game_next(game, deck, UserResponse(action=PokerAction(action="check"), seat=4))
     game_next(game, deck, UserResponse(action=PokerAction(action="check"), seat=3))
     game_next(game, deck, UserResponse(action=PokerAction(action="check"), seat=4))
