@@ -2,6 +2,7 @@ import React from 'react';
 import { UserInfo } from '../../menu/AppWrapper';
 import Card from '../../common/Card';
 import CardStack from '../../common/CardStack';
+import './PokerSeat.css'
 
 export interface Seat {
     info: UserInfo | null
@@ -40,26 +41,27 @@ const PokerSeat: React.FC<PokerSeatProps> = ({ seat, isMe, pokerPlayer, isTurn }
     }
 
     const renderLastAction = (player: PokerPlayer) => {
-        return <p className='poker-last-action'>{player.lastAction?.action}</p>
+        return <p key={`${player.lastAction?.action} ${player.lastAction?.amount}`} className='poker-last-action'>{player.lastAction?.action}</p>
     }
 
     const renderBottom = (player: PokerPlayer) => {
         return <div className='poker-player-bottom-panel'>
             <p>{player.stack}</p>
-            {renderLastAction(player)}
         </div>
     }
 
     const renderSeatBet = () => {
         if (pokerPlayer?.bet) {
-            return <div className='poker-seat-bet'>{pokerPlayer?.bet}</div>
+            return <div key={pokerPlayer?.bet} className='poker-seat-bet'>{pokerPlayer?.bet}</div>
         }
     }
 
     const renderSeatCards = () => {
         if (pokerPlayer && pokerPlayer.cards.length > 0) {
-            return <div className='poker-seat-cards'><CardStack cards={pokerPlayer.cards}/></div>
+            const folded = pokerPlayer.folded ? "folded" : ""
+            return <div className={`poker-seat-cards ${folded}`}><CardStack cards={pokerPlayer.cards}/></div>
         }
+        return <div/>
     }
 
 
@@ -70,6 +72,7 @@ const PokerSeat: React.FC<PokerSeatProps> = ({ seat, isMe, pokerPlayer, isTurn }
             </div>
             <div className='poker-seat-popup'>
                 {renderSeatBet()}
+                {pokerPlayer && renderLastAction(pokerPlayer)}
                 {renderSeatCards()}
             </div>
             <div className='poker-seat-bottom'>

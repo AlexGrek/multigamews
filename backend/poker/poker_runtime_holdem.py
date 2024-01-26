@@ -78,7 +78,12 @@ class PokerGamePlaying(BaseModel):
     small_blind: int
     total_turns: int = 0
     last_round_victory: Optional[VictoryRecord] = None
+    victory: Optional[VictoryRecord] = None
     comments: List[PokerComment] = []
+
+    def record_victory(self, victory):
+        self.victory = victory
+        self.last_round_victory = victory
 
     def comment(self, text, seats=[]):
         """Add new comment to comments list"""
@@ -97,6 +102,7 @@ class PokerGamePlaying(BaseModel):
 
     def new_round_reset(self):
         self.bank = 0
+        self.victory = None
         self.turn = self.dealer
         self.table = []
         for player in self.players:
@@ -229,17 +235,17 @@ def process_user_action(game: PokerGamePlaying, action: PokerAction):
     player.lastAction = action
     if action.action == "call":
         called = player.do_call(action.amount)
-        game.comment(f"User $$ calls {called}", game.turn)
+        game.comment(f"Player $$ calls {called}", game.turn)
     elif action.action == "raise":
         raised = player.do_raise(action.amount)
-        game.comment(f"User $$ raises {raised}", game.turn)
+        game.comment(f"Player $$ raises {raised}", game.turn)
     elif action.action == "bet":
         bet = player.do_bet(action.amount)
-        game.comment(f"User $$ bets {bet}", game.turn)
+        game.comment(f"Player $$ bets {bet}", game.turn)
     elif action.action in ["fold", "fold_show"]:
         player.do_fold(show_cards=action.action == "fold_show")
     elif action.action == "check":
-        game.comment(f"User $$ checks", game.turn)
+        game.comment(f"Player $$ checks", game.turn)
         pass
     else:
         raise UserCommandError(f"Unknown command {action.action}", "unknown command")
@@ -247,11 +253,12 @@ def process_user_action(game: PokerGamePlaying, action: PokerAction):
     player.acted = True
 
 
-def win_round_start_next(
+def win_round_wait_next(
     game: PokerGamePlaying, winners_indices, winner_combination, deck
 ):
     win_game(game, winners_indices, winner_combination)
-    start_round(game, deck)
+    game.expected_actions = []  # block any actions
+    # start_round(game, deck)
 
 
 def win_game(game: PokerGamePlaying, winners_indices, winner_combination):
@@ -261,11 +268,13 @@ def win_game(game: PokerGamePlaying, winners_indices, winner_combination):
         player = game.players[winner]
         player.stack += int(win)
         game.comment(f"User $$ wins {win}!", winner)
-    game.last_round_victory = VictoryRecord(
-        folded=True if winner_combination == None else False,
-        winners=winners_indices,
-        won=win,
-        combination=winner_combination,
+    game.record_victory(
+        VictoryRecord(
+            folded=True if winner_combination == None else False,
+            winners=winners_indices,
+            won=win,
+            combination=winner_combination,
+        )
     )
 
 
@@ -345,7 +354,9 @@ def showdown(game: PokerGamePlaying):
         folded=False,
         winners=winners,
         won=0,
-        combination=ev.class_to_string(ev.get_rank_class(evaluate_cards(board, players[winners[0]]))),
+        combination=ev.class_to_string(
+            ev.get_rank_class(evaluate_cards(board, players[winners[0]]))
+        ),
     )
 
 
@@ -403,15 +414,19 @@ def game_next(game: PokerGamePlaying, deck: Deck, response: UserResponse):
         end_bettinground(game)
         result = next_bettinground(game, deck)
         if result:
-            win_round_start_next(game, result.winners, result.combination, deck)
+            win_round_wait_next(game, result.winners, result.combination, deck)
+            return
     if len(players_left) < 2:
-        win_round_start_next(
-            game,
-            players_left,
-            None,
-            deck
-        )
+        win_round_wait_next(game, players_left, None, deck)
+        return
     game.next_not_folded_turn()
+    options_for_next_round(game)
+
+
+def game_next_round(game: PokerGamePlaying, deck: Deck):
+    """Execute after a victory pause"""
+    start_round(game, deck)
+    # next turn is called inside start_round
     options_for_next_round(game)
 
 

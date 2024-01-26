@@ -1,0 +1,63 @@
+
+.poker-last-action {
+    animation: disappear 3s ease-out 1s forwards;
+    border-radius: 4px;
+    font-size: small;
+    background-color: rgba(101, 194, 163, 0.669);
+    color: black;
+    box-shadow: 0 0 5px rgba(37, 37, 37, 0.639);
+    font-variant: small-caps;
+    font-weight: bold;
+    text-align: center;
+}
+
+@keyframes disappear {
+    0% {
+      opacity: 1; /* Start with full opacity */
+    }
+    100% {
+      opacity: 0; /* End with complete transparency */
+    }
+  }
+
+.poker-seat-bet {
+    position: absolute;
+    font-size: 11pt;
+    font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
+    background-color: rgba(159, 166, 28, 0.891);
+    border: 1px solid rgb(24, 24, 109);
+    border-radius: 40%;
+    padding: 0 3px;
+    text-align: center;
+    box-shadow: 0 1px 5px black;
+    animation: betrecolor 1.5s ease-out .5s forwards;
+}
+
+.poker-seat:nth-child(1) .poker-seat-bet,
+.poker-seat:nth-child(9) .poker-seat-bet {
+    right: -3em;
+}
+
+.poker-seat:nth-child(2) .poker-seat-bet,
+.poker-seat:nth-child(3) .poker-seat-bet {
+    left: -3em;
+}
+
+
+.poker-seat:nth-child(n+4):nth-child(-n+8) .poker-seat-bet {
+    top: -3em;
+}
+
+@keyframes betrecolor {
+    0% {
+      background-color: rgba(159, 166, 28, 0.891);
+    }
+    100% {
+      background-color: rgba(43, 107, 226, 0.563);
+    }
+  }
+
+.poker-seat-cards.folded {
+    opacity: .17;
+    transition: opacity 1s ease-in;
+}

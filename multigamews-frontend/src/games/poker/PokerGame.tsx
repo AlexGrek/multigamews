@@ -5,7 +5,7 @@ import { UserInfo } from '../../menu/AppWrapper';
 import './PokerGame.css'
 import Choices from '../../common/Choices';
 import PokerSeat, { PokerAction, PokerPlayer, Seat } from './PokerSeat';
-import PokerTable from './PokerTable';
+import PokerTable, { PokerComment, VictoryRecord } from './PokerTable';
 import PokerActions from './PokerActions';
 
 interface PokerGameProps {
@@ -32,6 +32,8 @@ interface PokerGamePlaying {
     table: string[]
     bank: number
     expected_actions: PokerAction[]
+    comments: PokerComment[]
+    last_round_victory: VictoryRecord | null
 }
 
 interface PokerGameStatus {
@@ -100,7 +102,7 @@ const PokerGame: React.FC<PokerGameProps> = ({ msg, user }) => {
 
     const renderSeatsAndTable = () => {
         if (status.playing) {
-            return [...renderSeats(false), <PokerTable tableCards={status.playing.table} bank={status.playing.bank}/>]
+            return [...renderSeats(false), <PokerTable players={status.setup.seats} data={status.playing.comments} tableCards={status.playing.table} bank={status.playing.bank} victory={status.playing.last_round_victory}/>]
         }
         else {
             return renderSeats(false)

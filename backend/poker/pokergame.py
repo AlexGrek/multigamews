@@ -7,7 +7,9 @@ from poker.poker_runtime_holdem import (
     create_deck,
     createSimplePokerGamePlaying,
     game_next,
+    game_next_round,
     game_start,
+    start_round,
 )
 import utils
 import json
@@ -101,16 +103,18 @@ class PokerGameEngine(GameEngine):
         return asdict(userinfo)
 
     async def broadcast_room_state(self, room):
-        logger.info(
-            f"Sending POKER update to {room.users} users: {self.state.model_dump()}"
-        )
+        # logger.info(
+        #     f"Sending POKER update to {room.users} users: {self.state.model_dump()}"
+        # )
+        if (self.state and self.state.playing and self.state.playing):
+            logger.info(f"Broadcasting room {self.state.playing.victory}")
         state_json = PokerGameStatusMessage(
             **{
                 "type": "game",
                 "data": {"type": "status", "personal": None, "status": self.state},
             }
         ).model_dump_json()
-        logger.info(state_json)
+        # logger.info(state_json)
 
         for user in room.users:
             await self.send_status(user)
@@ -145,6 +149,11 @@ class PokerGameEngine(GameEngine):
                 self.state.playing, self.deck, UserResponse(action=action, seat=seat)
             )
             await self.broadcast_room_state(room)
+            if self.state.playing.victory:
+                # we are in victory state, we have to run next round after pause
+                await asyncio.sleep(4)
+                game_next_round(self.state.playing, self.deck)
+                await self.broadcast_room_state(room)
         except UserCommandError as err:
             error = {
                 "type": "game",
