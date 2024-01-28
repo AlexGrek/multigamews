@@ -1,0 +1,25 @@
+.raise-amount-choice-group {
+    position: absolute;
+    bottom: 32pt;
+    padding: 1em .2em;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 0 7px rgba(0, 0, 0, 0.576);
+    border: 1px solid rgba(0, 0, 0, 0.576);
+    background-color: rgba(0, 0, 0, 0.26);
+    animation: appear 0.15s ease-out;
+}
+
+@keyframes appear {
+    0% {
+        opacity: 0;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+.raise-amount-choice {
+    margin: 2pt;
+    min-width: 6em;
+}

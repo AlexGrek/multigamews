@@ -16,12 +16,14 @@ interface PokerGameProps {
 interface PokerGameSetup {
     gameName: "holdem"
     seats: Seat[]
+    windelay: number
 }
 
 function genLoadingSetup(): PokerGameSetup {
     return {
         gameName: "holdem",
-        seats: []
+        seats: [],
+        windelay: 6
     }
 }
 
@@ -81,6 +83,17 @@ const PokerGame: React.FC<PokerGameProps> = ({ msg, user }) => {
         msg?.send({ type: 'game', data: { type: 'take_seat', data: seat } })
     }
 
+    const getPlayer = () => {
+        const i = personal?.seat
+        let player = null
+        if (i !== undefined && i !== null) {
+            if (status.playing && status.playing.players[i]) {
+                player = status.playing.players[i]
+            }
+        }
+        return player
+    }
+
     const renderSeats = (selectSeat: boolean = false) => {
         return status.setup.seats.map((seat, i) => {
             if (seat == null) {
@@ -102,7 +115,7 @@ const PokerGame: React.FC<PokerGameProps> = ({ msg, user }) => {
 
     const renderSeatsAndTable = () => {
         if (status.playing) {
-            return [...renderSeats(false), <PokerTable players={status.setup.seats} data={status.playing.comments} tableCards={status.playing.table} bank={status.playing.bank} victory={status.playing.last_round_victory}/>]
+            return [...renderSeats(false), <PokerTable players={status.setup.seats} data={status.playing.comments} tableCards={status.playing.table} bank={status.playing.bank} victory={status.playing.last_round_victory} />]
         }
         else {
             return renderSeats(false)
@@ -132,14 +145,19 @@ const PokerGame: React.FC<PokerGameProps> = ({ msg, user }) => {
     }
 
     const handleAct = (action: PokerAction, value: number = 0) => {
-        msg?.send({ "type": "game", "data": { "type": "action", "data": {...action, amount: value } }})
+        msg?.send({ "type": "game", "data": { "type": "action", "data": { ...action, amount: value } } })
     }
 
     const gameScreen = () => {
+        let maximumRaise = 0
+        const player = getPlayer()
+        if (player) {
+            maximumRaise = player.stack + (player.bet ? player.bet : 0)
+        }
         return <div>
             <div>
                 <div className='poker-take-seats-container'>{renderSeatsAndTable()}</div>
-                <div className='poker-actions-container'><PokerActions onAct={handleAct} myTurn={status.playing?.turn === personal?.seat} actions={status.playing?.expected_actions}/></div>
+                <div className='poker-actions-container'><PokerActions onAct={handleAct} myTurn={status.playing?.turn === personal?.seat} actions={status.playing?.expected_actions} maximumRaiseAmount={maximumRaise} /></div>
             </div>
         </div>
     }

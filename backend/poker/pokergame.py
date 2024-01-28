@@ -43,6 +43,7 @@ class Seat(BaseModel):
 class PokerGameSetup(BaseModel):
     gameName: str = "holdem"
     seats: List[Optional[Seat]]
+    windelay: int = 6
 
 
 class PokerGameStatus(BaseModel):
@@ -151,7 +152,7 @@ class PokerGameEngine(GameEngine):
             await self.broadcast_room_state(room)
             if self.state.playing.victory:
                 # we are in victory state, we have to run next round after pause
-                await asyncio.sleep(4)
+                await asyncio.sleep(self.state.setup.windelay)
                 game_next_round(self.state.playing, self.deck)
                 await self.broadcast_room_state(room)
         except UserCommandError as err:

@@ -81,9 +81,8 @@ const RoomsLobby: React.FC<RoomsLobbyProps> = ({ rooms, visible, msg }) => {
                 <Choices value={gameType} options={[{ value: "poker", label: "poker" }, { value: "chat", "label": "chat" }]} onChange={(v) => setGameType(v)} ></Choices>
                 <button
                     onClick={handleNewButtonClick}
-                    disabled={name.trim() === ''} // Disable the button if the input is empty
+                    disabled={name.trim() === ''}
                 >
-
                     Create
                 </button>
             </Modal>
