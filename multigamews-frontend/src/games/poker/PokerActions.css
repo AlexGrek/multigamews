@@ -30,6 +30,8 @@
 
 .poker-action-btn-group {
     perspective: 500px;
+    display: flex;
+    flex-wrap: wrap;
 }
 
 .poker-action {

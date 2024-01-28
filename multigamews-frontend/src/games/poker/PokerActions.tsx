@@ -29,14 +29,17 @@ const PokerActions: React.FC<PokerActionsProps> = ({ actions, myTurn, onAct, max
     }
 
     const renderRaisableButton = (action: PokerAction) => {
-        return <div className={`poker-action poker-raisable-action action${action.action}`}>
+        return [<div key="raisable" className={`poker-action poker-raisable-action action${action.action}`}>
             {action.action} <div className='poker-action-raisable-options'>
                 <button className='poker-action-bet-min' onClick={() => handleClick(action)}>
                     {action.amount}
                 </button>
-                <RaiseAmountPop min={action.amount} max={maximumRaiseAmount} onSelectAmount={(a) => handleClick(action, a)}/>
+                <RaiseAmountPop min={action.amount} max={maximumRaiseAmount} onSelectAmount={(a) => handleClick(action, a)} />
             </div>
-        </div>
+        </div>,
+        <button key="allin" className='poker-action action-allin' onClick={() => handleClick(action, maximumRaiseAmount)}>
+            All-in <i className='poker-action-amount'>{maximumRaiseAmount}</i>
+        </button>]
     }
 
     const handleClick = (act: PokerAction, amount?: number) => {
@@ -45,9 +48,9 @@ const PokerActions: React.FC<PokerActionsProps> = ({ actions, myTurn, onAct, max
 
     const renderActions = (actions: PokerAction[]) => {
         return actions.map((action, i) => {
-            return <span className='poker-action-btn-group' key={i}>
+            return <div className='poker-action-btn-group' key={i}>
                 {isRaiseableButton(action) ? renderRaisableButton(action) : renderSimpleActionButton(action)}
-            </span>
+            </div>
         })
     }
 
