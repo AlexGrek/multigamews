@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import CardStack from '../../common/CardStack';
 import { Seat } from './PokerSeat';
 import './PokerTable.css'
+import Tablebet from './Tablebet';
 
 interface PokerTableProps {
     tableCards: string[]
@@ -80,7 +81,7 @@ const PokerTable: React.FC<PokerTableProps> = ({ tableCards, bank, data, players
                 })}
             </div>
             <div className='poker-table-bank'>
-                <h2>{bank}</h2>
+                <Tablebet className='poker-table-bank-number' bet={bank}/>
             </div>
             <div className='poker-table-cards'>
                 <CardStack cards={tableCards} />

@@ -10,7 +10,7 @@ interface PokerActionsProps {
     onAct: (action: PokerAction, value: number) => void
 }
 
-const PokerActions: React.FC<PokerActionsProps> = ({ actions, myTurn, onAct, maximumRaiseAmount
+const PokerActions: React.FC<PokerActionsProps> = ({ actions, myTurn, onAct, maximumRaiseAmount,
 }) => {
 
     const isRaiseableButton = (action: PokerAction) => {
@@ -25,16 +25,16 @@ const PokerActions: React.FC<PokerActionsProps> = ({ actions, myTurn, onAct, max
     }
 
     const renderSimpleActionButton = (action: PokerAction) => {
-        return <button onClick={() => handleClick(action)} className={`poker-action action-${action.action}`}>{action.action} {renderAmountOnSimpleButton(action)}</button>
+        return <button disabled={action.amount > maximumRaiseAmount} onClick={() => handleClick(action)} className={`poker-action action-${action.action}`}>{action.action} {renderAmountOnSimpleButton(action)}</button>
     }
 
     const renderRaisableButton = (action: PokerAction) => {
         return [<div key="raisable" className={`poker-action poker-raisable-action action${action.action}`}>
             {action.action} <div className='poker-action-raisable-options'>
-                <button className='poker-action-bet-min' onClick={() => handleClick(action)}>
+                <button disabled={action.amount >= maximumRaiseAmount} className='poker-action-bet-min' onClick={() => handleClick(action)}>
                     {action.amount}
                 </button>
-                <RaiseAmountPop min={action.amount} max={maximumRaiseAmount} onSelectAmount={(a) => handleClick(action, a)} />
+                <RaiseAmountPop disabled={action.amount >= maximumRaiseAmount} min={action.amount} max={maximumRaiseAmount} onSelectAmount={(a) => handleClick(action, a)} />
             </div>
         </div>,
         <button key="allin" className='poker-action action-allin' onClick={() => handleClick(action, maximumRaiseAmount)}>
@@ -43,7 +43,13 @@ const PokerActions: React.FC<PokerActionsProps> = ({ actions, myTurn, onAct, max
     }
 
     const handleClick = (act: PokerAction, amount?: number) => {
-        onAct(act, amount ? amount : act.amount)
+        let action = act.action
+        if (act.action == "raise" && act.amount >= maximumRaiseAmount) {
+            // we just "call" if we cannot raise or bet
+            // useful when responding to higher raise with all-in
+            action = "call"
+        }
+        onAct({...act, action: action}, amount ? amount : act.amount)
     }
 
     const renderActions = (actions: PokerAction[]) => {

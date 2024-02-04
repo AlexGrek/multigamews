@@ -43,3 +43,9 @@
       opacity: 0; /* End with complete transparency */
     }
   }
+
+.poker-table-bank-number {
+    font-size: x-large;
+    font-weight: normal;
+    font-family: 'Courier New', Courier, monospace;
+}

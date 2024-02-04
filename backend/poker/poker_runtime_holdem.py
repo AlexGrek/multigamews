@@ -37,6 +37,7 @@ class PokerPlayer(BaseModel):
     lastAction: Optional[PokerAction] = None
     isAllIn: bool
     acted: bool = False
+    showCardsAfterFold: bool = False
 
     def do_bet_action(self, amount: int, action, isBlind=False):
         to_bet = amount
@@ -44,8 +45,8 @@ class PokerPlayer(BaseModel):
             to_bet = self.stack
             self.isAllIn = True
         self.stack = self.stack - to_bet
-        self.lastAction = PokerAction(action=action, amount=to_bet)
         self.bet += to_bet
+        self.lastAction = PokerAction(action=action, amount=self.bet)
         return to_bet
 
     def do_bet(self, amount, isBlind=False):
@@ -59,6 +60,27 @@ class PokerPlayer(BaseModel):
 
     def do_fold(self, show_cards=False):
         self.folded = True
+        self.showCardsAfterFold = show_cards
+
+    def is_cards_visible_to_everyone(self, allinRound=False):
+        if self.folded and self.showCardsAfterFold:
+            return True
+        if allinRound:
+            return True
+        return False
+    
+    def copy_hide_cards(self):
+        copy = self.model_copy(deep=True)
+        copy.cards = [ "??" for _card in copy.cards]
+        return copy
+    
+    def copy_hide_cards_if_needed(self, allinRound=False, skip=False):
+        if skip:
+            return self
+        if not self.is_cards_visible_to_everyone(allinRound=allinRound):
+            return self.copy_hide_cards()
+        else:
+            return self
 
 
 class VictoryRecord(BaseModel):
@@ -84,6 +106,13 @@ class PokerGamePlaying(BaseModel):
     def record_victory(self, victory):
         self.victory = victory
         self.last_round_victory = victory
+
+    def isAllinRound(self):
+        notAllinPlayers = 0
+        for player in self.players:
+            if player != None and not (player.folded or player.isAllIn):
+                notAllinPlayers += 1
+        return notAllinPlayers < 1
 
     def comment(self, text, seats=[]):
         """Add new comment to comments list"""
@@ -168,13 +197,13 @@ def createSimplePokerGamePlaying(playersMap, buyIn, blind):
 def do_big_blind(game: PokerGamePlaying):
     # assuming that previous turn was small blind
     turn = game.next_turn()
-    game.comment(f"User $$ small blind {game.small_blind * 2}", game.turn)
+    game.comment(f"User $$ big blind {game.small_blind * 2}", game.turn)
     game.players[turn].do_bet(game.small_blind * 2, True)
 
 
 def do_small_blind(game: PokerGamePlaying):
     turn = game.next_turn()  # next turn should do small blind
-    game.comment(f"User $$ big blind {game.small_blind}", game.turn)
+    game.comment(f"User $$ small blind {game.small_blind}", game.turn)
     player = game.players[turn]
     if player:
         player.do_bet(game.small_blind, True)
@@ -216,7 +245,7 @@ def process_user_action(game: PokerGamePlaying, action: PokerAction):
                 return act
         return False
 
-    def verifyAction(action: PokerAction):
+    def verifyAction(action: PokerAction, player: PokerPlayer):
         allowed = isAllowedAction(action)
         if not allowed:
             raise UserCommandError(
@@ -225,20 +254,22 @@ def process_user_action(game: PokerGamePlaying, action: PokerAction):
             )
         min = allowed.amount
         if min >= 0 and action.amount < min:
+            if (player.bet + player.stack) == action.amount:
+                return # player just cannot bet more
             raise UserCommandError(
                 f"Action {action.model_dump()} is less than minimal allowed: {min}",
                 "wrong amound",
             )
 
     player = game.players[game.turn]
-    verifyAction(action)
+    verifyAction(action, player)
     player.lastAction = action
     if action.action == "call":
-        called = player.do_call(action.amount)
-        game.comment(f"Player $$ calls {called}", game.turn)
+        called = player.do_call(action.amount - player.bet)
+        game.comment(f"Player $$ calls {action.amount}", game.turn)
     elif action.action == "raise":
-        raised = player.do_raise(action.amount)
-        game.comment(f"Player $$ raises {raised}", game.turn)
+        raised = player.do_raise(action.amount - player.bet)
+        game.comment(f"Player $$ raises {action.amount}", game.turn)
     elif action.action == "bet":
         bet = player.do_bet(action.amount)
         game.comment(f"Player $$ bets {bet}", game.turn)
@@ -384,12 +415,18 @@ def options_for_next_round(game: PokerGamePlaying):
     player = game.players[game.turn]
     players_left = game.not_folded_seat_index()
     bet = find_max_bet(game, players_left)
-    if player.bet < bet:
+    if player.isAllIn:
         game.expected_actions = [
-            PokerAction(action="call", amount=bet - player.bet),
-            PokerAction(action="raise", amount=(bet - player.bet) * 2),
-            PokerAction(action="fold", amount=-1),
-            PokerAction(action="fold_show", amount=-1),
+            PokerAction(action="check", amount=0),
+            PokerAction(action="fold", amount=0),
+            PokerAction(action="fold_show", amount=0),
+        ]
+    elif player.bet < bet:
+        game.expected_actions = [
+            PokerAction(action="call", amount=bet),
+            PokerAction(action="raise", amount=bet * 2),
+            PokerAction(action="fold", amount=0),
+            PokerAction(action="fold_show", amount=0),
         ]
     else:
         game.expected_actions = [
@@ -412,10 +449,11 @@ def game_next(game: PokerGamePlaying, deck: Deck, response: UserResponse):
     bet = find_max_bet(game, players_left)
     if bettinground_end_condition(game, players_left, bet):
         end_bettinground(game)
-        result = next_bettinground(game, deck)
-        if result:
-            win_round_wait_next(game, result.winners, result.combination, deck)
-            return
+        if len(players_left) >= 2:
+            result = next_bettinground(game, deck)
+            if result:
+                win_round_wait_next(game, result.winners, result.combination, deck)
+                return
     if len(players_left) < 2:
         win_round_wait_next(game, players_left, None, deck)
         return

@@ -164,13 +164,20 @@ class PokerGameEngine(GameEngine):
 
     async def send_status(self, websocket):
         """Send status message to specific recipient"""
+        state_share = self.state
+        if self.state.playing and not self.state.playing.victory:
+            state_copy = self.state.model_copy(deep=True)
+            seat = self.user_index_by_websocket(websocket)
+            allinRound = self.state.playing.isAllinRound()
+            state_copy.playing.players = [player.copy_hide_cards_if_needed(allinRound, skip=i==seat) if player else None for i, player in enumerate(state_copy.playing.players)]
+            state_share = state_copy
         state_json = PokerGameStatusMessage(
             **{
                 "type": "game",
                 "data": {
                     "type": "status",
                     "personal": self.get_personal_status(websocket),
-                    "status": self.state,
+                    "status": state_share,
                 },
             }
         ).model_dump_json()

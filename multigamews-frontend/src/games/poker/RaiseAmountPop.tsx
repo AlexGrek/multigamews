@@ -5,9 +5,10 @@ interface RaiseAmountPopProps {
     min: number;
     max: number;
     onSelectAmount: (amount: number) => void;
+    disabled: boolean
 }
 
-const RaiseAmountPop: React.FC<RaiseAmountPopProps> = ({ min, max, onSelectAmount }) => {
+const RaiseAmountPop: React.FC<RaiseAmountPopProps> = ({ min, max, onSelectAmount, disabled }) => {
     const [open, setOpen] = useState(false)
 
     useEffect(() => {
@@ -33,7 +34,7 @@ const RaiseAmountPop: React.FC<RaiseAmountPopProps> = ({ min, max, onSelectAmoun
     const renderChoices = () => {
         const choices = getChoices()
         return choices.map((choice, i) => {
-            return <button className='raise-amount-choice' key={i} onClick={() => handleVariantClick(choice)}>{choice}</button>
+            return <button disabled={disabled} className='raise-amount-choice' key={i} onClick={() => handleVariantClick(choice)}>{choice}</button>
         })
     }
 
@@ -45,7 +46,7 @@ const RaiseAmountPop: React.FC<RaiseAmountPopProps> = ({ min, max, onSelectAmoun
 
     return (
         <div className='raise-amount-container'>
-            <button className='raise-amount-button' onClick={() => setOpen(!open)}>...</button>
+            <button disabled={disabled} className='raise-amount-button' onClick={() => setOpen(!open)}>...</button>
             {open && renderChoiceGroup()}
         </div>
     );

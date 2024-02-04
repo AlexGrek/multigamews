@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Messenger from '../../core/Messenger';
 import MicroChat, { MessageInfo } from '../../common/MicroChat';
 import { UserInfo } from '../../menu/AppWrapper';
@@ -54,6 +54,13 @@ const PokerGame: React.FC<PokerGameProps> = ({ msg, user }) => {
     const [lastMsg, setLastMsg] = useState<MessageInfo | null>(null)
     const [status, setStatus] = useState<PokerGameStatus>({ stage: "loading", setup: genLoadingSetup() })
     const [personal, setPersonal] = useState<PersonalGameStatus | null>(null)
+    const parentRef = useRef<HTMLDivElement>(null);
+
+    const move = () => {
+        if (parentRef && parentRef.current) {
+            const rect = parentRef.current.getBoundingClientRect()
+        }
+    }
 
     useEffect(() => {
         console.info("ReRender " + Math.random())
@@ -108,7 +115,7 @@ const PokerGame: React.FC<PokerGameProps> = ({ msg, user }) => {
                     player = status.playing.players[i]
                     turn = status.playing.turn === i
                 }
-                return <PokerSeat seat={seat} isMe={i === personal?.seat} pokerPlayer={player} isTurn={turn} />
+                return <PokerSeat center={parentRef} seat={seat} isMe={i === personal?.seat} pokerPlayer={player} isTurn={turn} />
             }
         })
     }
@@ -156,7 +163,7 @@ const PokerGame: React.FC<PokerGameProps> = ({ msg, user }) => {
         }
         return <div>
             <div>
-                <div className='poker-take-seats-container'>{renderSeatsAndTable()}</div>
+                <div ref={parentRef} className='poker-take-seats-container'>{renderSeatsAndTable()}</div>
                 <div className='poker-actions-container'><PokerActions onAct={handleAct} myTurn={status.playing?.turn === personal?.seat} actions={status.playing?.expected_actions} maximumRaiseAmount={maximumRaise} /></div>
             </div>
         </div>

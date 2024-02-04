@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { UserInfo } from '../../menu/AppWrapper';
-import Card from '../../common/Card';
 import CardStack from '../../common/CardStack';
 import './PokerSeat.css'
+import Seatbet from './Seatbet';
+import Tablebet from './Tablebet';
 
 export interface Seat {
     info: UserInfo | null
@@ -28,9 +29,26 @@ interface PokerSeatProps {
     isMe: boolean;
     isTurn: boolean;
     pokerPlayer: PokerPlayer | null;
+    center: React.RefObject<HTMLDivElement>
 }
 
-const PokerSeat: React.FC<PokerSeatProps> = ({ seat, isMe, pokerPlayer, isTurn }) => {
+const PokerSeat: React.FC<PokerSeatProps> = ({ seat, isMe, pokerPlayer, isTurn, center }) => {
+    const [prevBet, setPrevBet] = useState<number>(0)
+
+
+
+
+    useEffect(() => {
+        if (pokerPlayer) {
+            if (pokerPlayer.bet != prevBet) {
+                if (pokerPlayer.bet == 0) {
+                    // genAnimatedClassForBet()
+                }
+                setPrevBet(pokerPlayer.bet ? pokerPlayer.bet : 0)
+            }
+        }
+    }, [pokerPlayer])
+
     const genClass = (baseClass: string) => {
         let base = isTurn ? `${baseClass} turn` : baseClass
         if (!isMe) {
@@ -46,27 +64,35 @@ const PokerSeat: React.FC<PokerSeatProps> = ({ seat, isMe, pokerPlayer, isTurn }
 
     const renderBottom = (player: PokerPlayer) => {
         return <div className='poker-player-bottom-panel'>
-            <p>{player.stack}</p>
+            <p><Tablebet bet={player.stack} className='player-stack'/></p>
         </div>
     }
 
+
+
     const renderSeatBet = () => {
         if (pokerPlayer?.bet) {
-            return <div key={pokerPlayer?.bet} className='poker-seat-bet'>{pokerPlayer?.bet}</div>
+            return <Seatbet bet={pokerPlayer?.bet || 0} center={center} />
         }
+        else if (prevBet > 0) {
+            console.log("No bet!")
+            return <Seatbet bet={0} center={center} />
+        }
+        console.log("Nothing at all")
+        return null
     }
 
     const renderSeatCards = () => {
         if (pokerPlayer && pokerPlayer.cards.length > 0) {
             const folded = pokerPlayer.folded ? "folded" : ""
-            return <div className={`poker-seat-cards ${folded}`}><CardStack cards={pokerPlayer.cards}/></div>
+            return <div className={`poker-seat-cards ${folded}`}><CardStack cards={pokerPlayer.cards} /></div>
         }
-        return <div/>
+        return <div />
     }
 
 
     return (
-        <div className={genClass("poker-seat poker-seat-container")} style={{backgroundImage: `url("${seat?.info?.avatar}")`}}>
+        <div className={genClass("poker-seat poker-seat-container")} style={{ backgroundImage: `url("${seat?.info?.avatar}")` }}>
             <div className='poker-seat-name'>
                 <p>{seat.info?.name}</p>
             </div>
