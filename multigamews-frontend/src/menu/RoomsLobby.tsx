@@ -78,7 +78,7 @@ const RoomsLobby: React.FC<RoomsLobbyProps> = ({ rooms, visible, msg }) => {
                     value={name}
                     onChange={handleInputChange}
                 />
-                <Choices value={gameType} options={[{ value: "poker", label: "poker" }, { value: "chat", "label": "chat" }]} onChange={(v) => setGameType(v)} ></Choices>
+                <Choices value={gameType} options={[{ value: "poker", label: "poker" }, { value: "chat", "label": "chat" }, { value: "dixit", "label": "Dixit" }]} onChange={(v) => setGameType(v)} ></Choices>
                 <button
                     onClick={handleNewButtonClick}
                     disabled={name.trim() === ''}

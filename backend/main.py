@@ -1,6 +1,7 @@
 import asyncio
 import random
 from typing import Dict, List, Optional
+from dixit.dixitmanager import DixitGameEngine
 from poker.pokergame import PokerGameEngine
 from room import Room, generate_user_info
 import websockets
@@ -235,7 +236,7 @@ class WebSocketServer:
             logger.warning(f"Failed to create room (already exists): {room_name}")
         else:
             game_engine = (
-                ChatGameEngine() if game_type == "chat" else PokerGameEngine()
+                create_game_engine(game_type)
             )  # Change this line if you have other game engines
             new_room = Room(name=room_name, game_engine=game_engine)
             self.rooms.append(new_room)
@@ -271,6 +272,15 @@ class WebSocketServer:
             logger.info("---- ---- ---- ---- --- ----------------------------")
             await asyncio.sleep(interval)
 
+def create_game_engine(game_type):
+    if game_type == "chat":
+        return ChatGameEngine()
+    elif game_type == "poker":
+        return PokerGameEngine()
+    elif game_type == "dixit":
+        return DixitGameEngine()
+    else:
+        raise ValueError(f"Unknown engine {game_type}, no such game type.")
 
 async def main():
     server = WebSocketServer()

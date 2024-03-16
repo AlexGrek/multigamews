@@ -1,0 +1,53 @@
+.fullw {
+    width: 100%;
+}
+
+.fullw > p {
+    margin-left: 6pt;
+    margin-right: 6pt;
+}
+
+.fullw > h2 {
+    margin-left: 6pt;
+    margin-right: 6pt;
+}
+
+.fullw > h3 {
+    margin-left: 6pt;
+    margin-right: 6pt;
+}
+
+
+.faded {
+    opacity: .5;
+}
+
+.dixit-players-panel {
+    display: flex;
+    flex-direction: row;
+}
+
+.dixit-take-seats-container {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.dixit-round-stats-blocks {
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: row;
+    justify-content: center;
+    align-items: start;
+    background-color: rgba(42, 124, 53, .3);
+    padding: 4pt;
+}
+
+.dixit-round-stats-blocks > div {
+    background-color: rgba(25, 73, 169, 0.4);
+    border-radius: 3pt;
+    border: 1ps solid black;
+    margin: 8pt 4pt;
+    padding: 3pt 6pt;
+}

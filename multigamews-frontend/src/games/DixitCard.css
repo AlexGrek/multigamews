@@ -1,0 +1,36 @@
+.dixit-card {
+    width: 270pt;
+    height: 370pt;
+    border-radius: 12pt;
+    background-size: cover;
+    font-size: smaller;
+    font-weight: bold;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 6pt;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.576);
+}
+
+.dixit-card:hover {
+    outline: 2px solid white;
+}
+
+.dixit-cards {
+    margin: 10px;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    flex-direction: row;
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.dixit-cards-addon {
+    width: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    padding: 4pt 2pt;
+    text-align: center;
+    font-weight: lighter;
+}

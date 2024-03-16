@@ -8,6 +8,7 @@ import CurrentRoomWidget from './CurrentRoomWidget';
 import ChatGame from '../games/Chat';
 import PokerGame from '../games/poker/PokerGame';
 import UserWidget from './UserWidget';
+import DixitGame from '../games/dixit/DixitGame';
 
 export interface UserInfo {
     name: string,
@@ -32,11 +33,20 @@ const AppWrapper: React.FC<AppWrapperProps> = ({ }) => {
 
     useEffect(() => {
         // Connect to the WebSocket server
-        const newWs = new WebSocket('ws://localhost:8765');
-    
+        const currentUrl = window.location.href;
+
+        // Remove port number if present
+        let urlWithoutPort = currentUrl.replace(/:\d+/, '');
+        urlWithoutPort = urlWithoutPort.replace(/^https?:\/\//, '');
+        urlWithoutPort = urlWithoutPort.replace(/\/.*$/, '');
+        const webSocketPort = 8765;
+        const webSocketUrl = `ws://${urlWithoutPort}:${webSocketPort}`;
+
+        const newWs = new WebSocket(webSocketUrl);
+
         newWs.onopen = () => {
-          console.log('WebSocket connection opened');
-          setConnected(true)
+            console.log('WebSocket connection opened');
+            setConnected(true)
         };
 
         let msgr = new Messenger(newWs)
@@ -58,19 +68,19 @@ const AppWrapper: React.FC<AppWrapperProps> = ({ }) => {
         msgr.onMessageType("game", (message) => {
             console.warn("Game message received")
         })
-    
+
         newWs.onclose = () => {
-          console.log('WebSocket connection closed');
-          setConnected(false)
+            console.log('WebSocket connection closed');
+            setConnected(false)
         };
-    
+
         setWs(newWs);
-    
+
         return () => {
-          // Close the WebSocket connection when the component is unmounted
-          newWs.close();
+            // Close the WebSocket connection when the component is unmounted
+            newWs.close();
         };
-      }, []);
+    }, []);
 
 
     const handleOpenModalTester = () => {
@@ -97,14 +107,15 @@ const AppWrapper: React.FC<AppWrapperProps> = ({ }) => {
                     {currentRoom && <CurrentRoomWidget currentRoom={currentRoom} msg={msg}></CurrentRoomWidget>}
                 </div>
                 <div className='header-right'>
-                    <UserWidget userInfo={userInfo} msg={msg}/>
+                    <UserWidget userInfo={userInfo} msg={msg} />
                     {connectionWidget}
                     <button onClick={handleOpenModalTester}><i className="fas fa-terminal"></i></button>
                 </div>
             </header>
             {!(currentRoom) && <RoomsLobby msg={msg} rooms={rooms} visible={true} />}
-            {currentRoom && currentRoomInfo["game"] === "chat" && <ChatGame msg={msg}/>}
-            {currentRoom && currentRoomInfo["game"] === "poker" && <PokerGame msg={msg} user={userInfo}/>}
+            {currentRoom && currentRoomInfo["game"] === "chat" && <ChatGame msg={msg} />}
+            {currentRoom && currentRoomInfo["game"] === "poker" && <PokerGame msg={msg} user={userInfo} />}
+            {currentRoom && currentRoomInfo["game"] === "dixit" && <DixitGame msg={msg} user={userInfo} />}
 
             <Modal header="websocket test" isOpen={wsTesterOpen} onClose={handleCloseModalTester}>
                 <WebSocketTest />
