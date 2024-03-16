@@ -286,7 +286,7 @@ def create_game_engine(game_type):
     else:
         raise ValueError(f"Unknown engine {game_type}, no such game type.")
     
-static_dir = pathlib.Path(__file__).parent.parent / "multigamews-frontend" / "dist"
+static_dir = pathlib.Path(__file__).parent.parent / "multigamews-frontend" / "dist_prebuild"
 
 async def handle_http(request):
     """Serve the index.html file for HTTP requests"""
