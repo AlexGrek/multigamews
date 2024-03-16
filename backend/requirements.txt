@@ -3,3 +3,4 @@ colorlog
 pydantic
 treys
 aiohttp
+aiohttp_cors

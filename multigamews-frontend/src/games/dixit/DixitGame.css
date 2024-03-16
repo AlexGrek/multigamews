@@ -51,3 +51,7 @@
     margin: 8pt 4pt;
     padding: 3pt 6pt;
 }
+
+.debug {
+    display: none;
+}

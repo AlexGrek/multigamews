@@ -1,4 +1,5 @@
 import asyncio
+import pathlib
 import random
 from typing import Dict, List, Optional
 from dixit.dixitmanager import DixitGameEngine
@@ -13,6 +14,9 @@ import utils
 import pprint
 from colorlog import ColoredFormatter
 import traceback
+
+import aiohttp_cors
+from aiohttp import web
 
 PUBLIC_PATH = "../multigamews-frontend/public/"
 AVATAR_PATH = "avatars/"
@@ -281,13 +285,44 @@ def create_game_engine(game_type):
         return DixitGameEngine()
     else:
         raise ValueError(f"Unknown engine {game_type}, no such game type.")
+    
+static_dir = pathlib.Path(__file__).parent.parent / "multigamews-frontend" / "dist"
+
+async def handle_http(request):
+    """Serve the index.html file for HTTP requests"""
+    index_path = static_dir / "index.html"
+    return web.FileResponse(index_path)
+
+async def handle_static(request):
+    file_path = static_dir / request.match_info['path']
+    if file_path.is_file():
+        return web.FileResponse(file_path)
+    raise web.HTTPNotFound()
 
 async def main():
     server = WebSocketServer()
-    start_server = websockets.serve(server.handle_connection, "localhost", 8765)
 
-    logger.debug("WebSocket server running at ws://localhost:8765/")
-    await asyncio.gather(start_server, server.log_everything_forever())
+    # Create an aiohttp application for serving static files
+    app = web.Application()
+    app.router.add_get("/", handle_http)
+    app.router.add_get('/{path:.*}', handle_static)
+
+    # Start the aiohttp server for serving static files
+
+    host = '0.0.0.0'
+
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "host", 8000)
+    await site.start()
+    logger.debug(f"Serving static files from http://localhost:8000/static/")
+
+    # Start the WebSocket server
+    start_server = websockets.serve(server.handle_connection, host, 8765)
+    logger.debug(f"WebSocket server running at ws://{host}:8765/")
+
+    # Gather WebSocket server and aiohttp server
+    await asyncio.gather(start_server)
 
     # Keep the server running
     await asyncio.Event().wait()
