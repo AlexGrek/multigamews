@@ -24,7 +24,10 @@ const ChooseNewAvatar: React.FC<ChooseNewAvatarProps> = ({ avatars, loadNewAvata
 
     return (
         <div className='choose-new-avatar-container'>
-            <div className='choose-new-top-menu'><button className='link-button' onClick={() => loadNewAvatars()}>Reload...</button><button className='link-button' onClick={() => cancel()}>Cancel</button></div>
+            <div className='choose-new-top-menu'>
+                <button className='link-button' onClick={() => loadNewAvatars()}>Reload...</button>
+                <button className='link-button' onClick={() => cancel()}>Cancel</button>
+            </div>
             {images}
         </div>
     );
