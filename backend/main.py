@@ -313,7 +313,7 @@ async def main():
 
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, "host", 8000)
+    site = web.TCPSite(runner, host, 8000)
     await site.start()
     logger.debug(f"Serving static files from http://localhost:8000/static/")
 
